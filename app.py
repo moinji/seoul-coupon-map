@@ -11,6 +11,7 @@ def load_data():
     return df
 
 df = load_data()
+df["자치구"] = "강남구"
 
 st.sidebar.header("🔍 필터 설정")
 gu_options = sorted(df["자치구"].dropna().unique())
@@ -28,4 +29,4 @@ if selected_biz != "전체":
 draw_store_map(filtered_df)
 
 st.markdown("### 📋 가맹점 목록")
-st.dataframe(filtered_df[["매장명", "업종", "주소"]].reset_index(drop=True))
+st.dataframe(filtered_df[["상호명", "업종", "도로명주소"]].reset_index(drop=True))
