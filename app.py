@@ -34,7 +34,7 @@ def load_and_preprocess_data(csv_path):
 
     try:
         df = pd.read_csv(csv_path)
-        required_cols = ['store_name', 'address', 'industry_type', 'latitude', 'longitude']
+        required_cols = ['store_name', 'address', 'latitude', 'longitude']
         if not all(col in df.columns for col in required_cols):
             st.error(f"CSV 파일에 필수 컬럼({', '.join(required_cols)})이 모두 포함되어 있지 않습니다.")
             return pd.DataFrame()
@@ -55,18 +55,6 @@ def load_and_preprocess_data(csv_path):
         st.error(f"데이터 로드 및 전처리 중 오류 발생: {e}")
         return pd.DataFrame()
 
-# --- 업종별 아이콘 매핑 ---
-icon_mapping = {
-    '마트': {'color': 'blue', 'icon': 'shopping-cart', 'prefix': 'fa'},
-    '베이커리': {'color': 'orange', 'icon': 'cutlery', 'prefix': 'fa'},
-    '음식점': {'color': 'green', 'icon': 'spoon', 'prefix': 'fa'},
-    '카페': {'color': 'purple', 'icon': 'coffee', 'prefix': 'fa'},
-    '의류': {'color': 'pink', 'icon': 'shopping-bag', 'prefix': 'fa'},
-    '시장': {'color': 'darkgreen', 'icon': 'shopping-basket', 'prefix': 'fa'},
-    '서점': {'color': 'cadetblue', 'icon': 'book', 'prefix': 'fa'},
-    '기타': {'color': 'gray', 'icon': 'info-sign', 'prefix': 'glyphicon'}
-}
-
 # --- Streamlit 앱 설정 ---
 st.set_page_config(layout="wide", page_title="민생회복 소비쿠폰 사용처", page_icon="💸")
 
@@ -83,10 +71,6 @@ if df_shops.empty:
 
 # --- 사이드바 필터 ---
 st.sidebar.header("🔍 필터 설정")
-
-# 업종 필터
-all_industries = ['전체'] + sorted(df_shops['industry_type'].unique().tolist())
-selected_industry = st.sidebar.selectbox("업종 선택", all_industries)
 
 # 지역구 필터
 all_districts = ['전체'] + sorted(df_shops['district'].unique().tolist())
@@ -112,10 +96,6 @@ if st.sidebar.button("내 위치로 지도 이동"):
 
 # --- 데이터 필터링 ---
 filtered_df = df_shops.copy()
-
-# 업종 필터
-if selected_industry != '전체':
-    filtered_df = filtered_df[filtered_df['industry_type'] == selected_industry]
 
 # 지역구 필터
 if selected_district != '전체':
@@ -144,8 +124,7 @@ with col3:
     else:
         st.metric("평균 거리", "0 km")
 with col4:
-    unique_industries = len(filtered_df['industry_type'].unique()) if not filtered_df.empty else 0
-    st.metric("업종 수", unique_industries)
+    st.metric("지역구 수", len(filtered_df['district'].unique()) if not filtered_df.empty else 0)
 
 # --- 탭으로 구분된 뷰 ---
 tab1, tab2, tab3 = st.tabs(["🗺️ 지도 보기", "📋 리스트 보기", "📊 통계"])
@@ -197,13 +176,9 @@ with tab1:
     # 매장 마커 추가
     for idx, row in filtered_df.iterrows():
         if pd.notnull(row['latitude']) and pd.notnull(row['longitude']):
-            industry = row['industry_type']
-            icon_info = icon_mapping.get(industry, icon_mapping['기타'])
-            
             popup_html = f"""
             <div style="width: 250px;">
                 <h4>🏪 {row['store_name']}</h4>
-                <p><b>업종:</b> {row['industry_type']}</p>
                 <p><b>주소:</b> {row['address']}</p>
                 <p><b>거리:</b> {row['distance']:.2f} km</p>
             </div>
@@ -214,9 +189,9 @@ with tab1:
                 popup=folium.Popup(popup_html, max_width=300),
                 tooltip=f"{row['store_name']} ({row['distance']:.2f}km)",
                 icon=folium.Icon(
-                    color=icon_info['color'],
-                    icon=icon_info['icon'],
-                    prefix=icon_info['prefix']
+                    color='blue',
+                    icon='shopping-cart',
+                    prefix='fa'
                 )
             ).add_to(marker_cluster)
     
@@ -231,21 +206,18 @@ with tab2:
     
     if not filtered_df.empty:
         # 정렬 옵션
-        sort_option = st.selectbox("정렬 기준", ["거리순", "이름순", "업종순"])
+        sort_option = st.selectbox("정렬 기준", ["거리순", "이름순"])
         
         if sort_option == "거리순":
             display_df = filtered_df.sort_values('distance')
-        elif sort_option == "이름순":
-            display_df = filtered_df.sort_values('store_name')
         else:
-            display_df = filtered_df.sort_values('industry_type')
+            display_df = filtered_df.sort_values('store_name')
         
         # 매장 카드 형태로 표시
         for idx, row in display_df.head(20).iterrows():  # 상위 20개만 표시
             with st.expander(f"🏪 {row['store_name']} ({row['distance']:.2f}km)"):
                 col1, col2 = st.columns([2, 1])
                 with col1:
-                    st.write(f"**업종:** {row['industry_type']}")
                     st.write(f"**주소:** {row['address']}")
                     st.write(f"**지역구:** {row['district']}")
                 with col2:
@@ -260,18 +232,24 @@ with tab3:
     st.subheader("📊 통계 정보")
     
     if not filtered_df.empty:
-        # 업종별 분포
+        # 지역구별 분포
         col1, col2 = st.columns(2)
         
         with col1:
-            st.write("**업종별 매장 수**")
-            industry_counts = filtered_df['industry_type'].value_counts()
-            st.bar_chart(industry_counts)
-        
-        with col2:
             st.write("**지역구별 매장 수**")
             district_counts = filtered_df['district'].value_counts()
             st.bar_chart(district_counts)
+        
+        with col2:
+            st.write("**매장 밀도 (km당 매장 수)**")
+            # 거리 구간별 매장 밀도 계산
+            distance_bins = pd.cut(filtered_df['distance'], bins=5)
+            density_data = filtered_df.groupby(distance_bins).size()
+            density_df = pd.DataFrame({
+                '거리구간': [str(interval) for interval in density_data.index],
+                '매장수': density_data.values
+            }).set_index('거리구간')
+            st.bar_chart(density_df)
         
         # 거리별 분포
         st.write("**거리별 매장 분포**")
