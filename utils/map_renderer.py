@@ -13,7 +13,7 @@ def draw_store_map(df):
     for _, row in df.iterrows():
         folium.Marker(
             location=[row["위도"], row["경도"]],
-            popup=f"{row['매장명']}<br>{row['업종']}<br>{row['주소']}",
+            popup=f"{row['상호명']}<br>{row['업종']}<br>{row['도로명주소']}",
             icon=folium.Icon(color="blue", icon="info-sign")
         ).add_to(marker_cluster)
 
