@@ -1,6 +1,12 @@
+<<<<<<< Updated upstream
 streamlit
 pandas
 folium
 requests
 geopy
 streamlit-folium
+=======
+streamlit>=1.28.0
+pandas>=1.5.0
+numpy>=1.21.0
+>>>>>>> Stashed changes
