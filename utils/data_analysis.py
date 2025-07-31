@@ -12,7 +12,7 @@ warnings.filterwarnings('ignore')
 plt.rcParams['font.family'] = ['DejaVu Sans', 'Malgun Gothic', 'NanumGothic', 'AppleGothic']
 plt.rcParams['axes.unicode_minus'] = False
 
-def load_data(csv_path='shops.csv'):
+def load_data(csv_path='result11.csv'):
     """
     EUC-KR 인코딩의 shops.csv 파일을 로드하고 전처리
     
