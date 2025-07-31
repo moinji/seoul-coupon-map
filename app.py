@@ -1,8 +1,5 @@
 import streamlit as st
 import pandas as pd
-<<<<<<< Updated upstream
-from utils.map_renderer import draw_store_map
-=======
 import folium
 from folium.plugins import MarkerCluster, HeatMap
 from streamlit_folium import st_folium
@@ -10,21 +7,25 @@ import os
 import math
 from datetime import datetime
 from utils.data_analysis import generate_analysis
->>>>>>> Stashed changes
 
-st.set_page_config(page_title="서울 소비쿠폰 사용처 맵", layout="wide")
-st.title("💳 서울시 소비쿠폰 사용처 지도")
+# --- 거리 계산 함수 추가 ---
+def calculate_distance(lat1, lon1, lat2, lon2):
+    """두 지점 간의 거리를 계산 (km)"""
+    R = 6371  # 지구의 반지름 (km)
+    
+    lat1_rad = math.radians(lat1)
+    lon1_rad = math.radians(lon1)
+    lat2_rad = math.radians(lat2)
+    lon2_rad = math.radians(lon2)
+    
+    dlat = lat2_rad - lat1_rad
+    dlon = lon2_rad - lon1_rad
+    
+    a = math.sin(dlat/2)**2 + math.cos(lat1_rad) * math.cos(lat2_rad) * math.sin(dlon/2)**2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+    
+    return R * c
 
-<<<<<<< Updated upstream
-@st.cache_data
-def load_data():
-    df = pd.read_csv("data/stores_gangnam_geo.csv")
-    return df
-
-df = load_data()
-df["자치구"] = "강남구"
-
-=======
 # --- 데이터 로드 및 전처리 함수 ---
 @st.cache_data
 def load_and_preprocess_data(csv_path):
@@ -114,26 +115,8 @@ if df_shops.empty:
     st.stop()
 
 # --- 사이드바 필터 ---
->>>>>>> Stashed changes
 st.sidebar.header("🔍 필터 설정")
-gu_options = sorted(df["자치구"].dropna().unique())
-biz_options = sorted(df["업종"].dropna().unique())
 
-<<<<<<< Updated upstream
-selected_gu = st.sidebar.selectbox("자치구 선택", ["전체"] + gu_options)
-selected_biz = st.sidebar.selectbox("업종 선택", ["전체"] + biz_options)
-
-filtered_df = df.copy()
-if selected_gu != "전체":
-    filtered_df = filtered_df[filtered_df["자치구"] == selected_gu]
-if selected_biz != "전체":
-    filtered_df = filtered_df[filtered_df["업종"] == selected_biz]
-
-draw_store_map(filtered_df)
-
-st.markdown("### 📋 가맹점 목록")
-st.dataframe(filtered_df[["상호명", "업종", "도로명주소"]].reset_index(drop=True))
-=======
 # 검색 기능 추가
 search_query = st.sidebar.text_input("매장 이름 검색")
 
@@ -368,6 +351,7 @@ with tab3:
         else:
             st.error("데이터를 불러올 수 없습니다.")
 
+
 # --- 푸터 ---
 st.markdown("---")
 st.markdown(
@@ -380,4 +364,3 @@ st.markdown(
     """, 
     unsafe_allow_html=True
 )
->>>>>>> Stashed changes
