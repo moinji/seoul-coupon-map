@@ -217,7 +217,14 @@ with tab1:
         loading_placeholder = st.empty()
         loading_placeholder.info(f"🗺️ {len(filtered_df)}개 매장의 지도를 생성하는 중...")
         
-        m = folium.Map(location=[map_center_lat, map_center_lon], zoom_start=13)
+        # 기존 코드 수정
+        m = folium.Map(
+        location=[37.5665, 126.9780],
+        zoom_start=13,
+        tiles="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",  # OSM 타일 사용
+        attr='OpenStreetMap',
+        prefer_canvas=True  # 대용량 마커 시 성능 향상
+        )
         
         if map_style == "위성":
             folium.TileLayer(
