@@ -6,3 +6,5 @@ __pycache__/
 secrets.txt
 node_modules/
 *.xlsx
+*.csv
+.csv
