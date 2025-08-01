@@ -1,4 +1,8 @@
 import streamlit as st
+
+# --- Streamlit 앱 설정 ---
+st.set_page_config(layout="wide", page_title="민생회복 소비쿠폰 사용처", page_icon="💸")
+
 import pandas as pd
 import streamlit.components.v1 as components
 import os
@@ -7,6 +11,62 @@ from datetime import datetime
 import json
 from utils.data_analysis import generate_analysis
 from dotenv import load_dotenv
+
+# matplotlib 한글 폰트 설정
+import matplotlib.pyplot as plt
+import matplotlib.font_manager as fm
+import warnings
+import platform
+
+# matplotlib 한글 폰트 설정
+import matplotlib.pyplot as plt
+import matplotlib.font_manager as fm
+import warnings
+import platform
+
+def configure_matplotlib_fonts():
+    """matplotlib 한글 폰트 설정"""
+    try:
+        # 폰트 경고 무시
+        warnings.filterwarnings('ignore', category=UserWarning, module='matplotlib')
+        warnings.filterwarnings('ignore', message='findfont: Font family')
+        
+        # 사용 가능한 폰트 확인
+        available_fonts = [f.name for f in fm.fontManager.ttflist]
+        
+        # 운영체제별 우선순위 폰트 리스트
+        system = platform.system()
+        if system == 'Windows':
+            preferred_fonts = ['Malgun Gothic', 'Gulim', 'Dotum', 'Arial Unicode MS', 'DejaVu Sans']
+        elif system == 'Darwin':  # macOS
+            preferred_fonts = ['Arial Unicode MS', 'AppleGothic', 'Helvetica', 'DejaVu Sans']
+        else:  # Linux
+            preferred_fonts = ['DejaVu Sans', 'Liberation Sans', 'Arial', 'sans-serif']
+        
+        # 첫 번째로 사용 가능한 폰트 설정
+        font_found = False
+        for font in preferred_fonts:
+            if font in available_fonts or font == 'sans-serif':
+                plt.rcParams['font.family'] = font
+                font_found = True
+                break
+        
+        if not font_found:
+            plt.rcParams['font.family'] = 'sans-serif'
+        
+        # 추가 설정
+        plt.rcParams['axes.unicode_minus'] = False  # 마이너스 부호 깨짐 방지
+        plt.rcParams['font.size'] = 10              # 기본 폰트 크기
+        plt.rcParams['figure.figsize'] = (10, 6)    # 기본 그림 크기
+        
+    except Exception as e:
+        # 오류 발생 시 최소한의 설정
+        plt.rcParams['font.family'] = 'sans-serif'
+        plt.rcParams['axes.unicode_minus'] = False
+        print(f"폰트 설정 중 오류 발생: {e}")
+
+# 폰트 설정 실행
+configure_matplotlib_fonts()
 
 load_dotenv()
 KAKAO_MAP_API_KEY = os.getenv("KAKAO_MAP_API_KEY")
@@ -235,7 +295,7 @@ def create_kakao_map(filtered_df, user_lat, user_lon, max_distance, kakao_api_ke
         }}]
     }});
 
-    var markersData = {{markers_json}};
+    var markersData = {markers_json};
     var markers = [];
 
     for (var i = 0; i < markersData.length; i++) {{
@@ -282,8 +342,6 @@ def create_kakao_map(filtered_df, user_lat, user_lon, max_distance, kakao_api_ke
 
     return kakao_map_html
 
-# --- Streamlit 앱 설정 ---
-st.set_page_config(layout="wide", page_title="민생회복 소비쿠폰 사용처", page_icon="💸")
 
 # --- 헤더 ---
 st.title("💸 민생회복 소비쿠폰 사용처 찾기")
