@@ -1,6 +1,6 @@
 import streamlit as st
 
-# --- Streamlit 앱 설정 ---
+# --- Streamlit 앱 설정 (가장 먼저 실행되어야 함) ---
 st.set_page_config(layout="wide", page_title="민생회복 소비쿠폰 사용처", page_icon="💸")
 
 import pandas as pd
@@ -9,14 +9,10 @@ import os
 import math
 from datetime import datetime
 import json
+import html  # HTML 이스케이프를 위해 추가
 from utils.data_analysis import generate_analysis
 from dotenv import load_dotenv
-
-# matplotlib 한글 폰트 설정
-import matplotlib.pyplot as plt
-import matplotlib.font_manager as fm
-import warnings
-import platform
+from utils.analysis_sungdong import run_sungdong_analysis
 
 # matplotlib 한글 폰트 설정
 import matplotlib.pyplot as plt
@@ -164,35 +160,42 @@ def load_and_preprocess_data(csv_path):
             st.error(f"데이터 로드 및 전처리 중 오류 발생: {e}")
             return pd.DataFrame()
 
-# --- 카카오맵 생성 함수 ---
+# --- 수정된 카카오맵 생성 함수 ---
 def create_kakao_map(filtered_df, user_lat, user_lon, max_distance, kakao_api_key):
-    
-    """카카오맵을 생성하는 함수"""
+    """가시성이 개선된 카카오맵 HTML 생성 함수"""
 
-    # 마커 데이터를 JSON 형태로 준비
+    if not kakao_api_key:
+        return "<div style='padding:20px; text-align:center; color:red;'>❌ API 키가 없어서 지도를 표시할 수 없습니다.</div>"
+
+    # --- 마커 데이터 준비 ---
     markers_data = []
-    for idx, row in filtered_df.iterrows():
-        if pd.notnull(row['latitude']) and pd.notnull(row['longitude']):
-            markers_data.append({
-                'lat': float(row['latitude']),
-                'lng': float(row['longitude']),
-                'name': str(row['store_name']),
-                'address': str(row['full_address']),
-                'industry_code': str(row['industry_code']),
-                'distance': float(row['distance'])
-            })
+    for _, row in filtered_df.iterrows():
+        try:
+            if pd.notnull(row['latitude']) and pd.notnull(row['longitude']):
+                markers_data.append({
+                    'lat': float(row['latitude']),
+                    'lng': float(row['longitude']),
+                    'name': html.escape(str(row['store_name'])[:50]),
+                    'address': html.escape(str(row['full_address'])[:100]),
+                    'industry_code': html.escape(str(row['industry_code'])),
+                    'distance': round(float(row['distance']), 2)
+                })
+        except:
+            continue
+
+    if not markers_data:
+        return "<div style='padding:20px; text-align:center;'>📍 표시할 매장이 없습니다.</div>"
 
     markers_json = json.dumps(markers_data, ensure_ascii=False)
 
+    # --- 카카오맵 HTML ---
     kakao_map_html = f"""
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8">
     <title>카카오맵 - 민생회복 소비쿠폰 사용처</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         html, body {{
             width: 100%;
@@ -204,146 +207,447 @@ def create_kakao_map(filtered_df, user_lat, user_lon, max_distance, kakao_api_ke
             width: 100%;
             height: 600px;
         }}
+        #loading {{
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            text-align: center;
+            font-family: Arial, sans-serif;
+        }}
+        .error {{
+            color: red;
+            padding: 20px;
+            text-align: center;
+            font-family: Arial, sans-serif;
+        }}
     </style>
 </head>
 <body>
+    <div id="loading">
+        🗺️ 지도 로딩 중...<br>
+        <small>잠시만 기다려주세요</small>
+    </div>
     <div id="map"></div>
 
-    <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey={kakao_api_key}&libraries=services,clusterer"></script>
+    <!-- 카카오맵 SDK (autoload=false) -->
+    <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey={kakao_api_key}&libraries=services,clusterer&autoload=false"></script>
     <script>
-    var mapContainer = document.getElementById('map'),
-        mapOption = {{
-            center: new kakao.maps.LatLng({user_lat}, {user_lon}),
-            level: 5
-        }};
-
-    var map = new kakao.maps.Map(mapContainer, mapOption);
-
-    // 내 위치 기본값 (서울 시청으로 설정)
-    var userPosition = new kakao.maps.LatLng({user_lat}, {user_lon});
-
-    // 내 위치 마커 생성
-    var userMarker = new kakao.maps.Marker({{
-        position: userPosition,
-        image: new kakao.maps.MarkerImage(
-            'https://maps.google.com/mapfiles/ms/icons/blue-dot.png',
-            new kakao.maps.Size(40, 40),
-            new kakao.maps.Point(20, 40)
-        )
-    }});
-
-    userMarker.setMap(map);
-
-    // 반경 원 생성
-    var circle = new kakao.maps.Circle({{
-        center: userPosition,
-        radius: {max_distance * 1000},
-        strokeWeight: 3,
-        strokeColor: '#1E90FF',
-        strokeOpacity: 0.7,
-        strokeStyle: 'solid',
-        fillColor: '#1E90FF',
-        fillOpacity: 0.15
-    }});
-
-    circle.setMap(map);
-
-    // 실제 브라우저 GPS로 위치 업데이트
-    navigator.geolocation.getCurrentPosition((position) => {{
-        const lat = position.coords.latitude;
-        const lon = position.coords.longitude;
-
-        userPosition = new kakao.maps.LatLng(lat, lon);
-        map.setCenter(userPosition);
-        userMarker.setPosition(userPosition);
-        circle.setPosition(userPosition);
-    }});
-
-    // 내 위치 마커 클릭 시 실제 GPS 위치로 이동
-    kakao.maps.event.addListener(userMarker, 'click', function() {{
-        map.panTo(userPosition);
-        map.setLevel(3, {{animate: {{duration: 500}}}});
-    }});
-
-    // 원(circle) 마우스 오버 효과
-    kakao.maps.event.addListener(circle, 'mouseover', function() {{
-        circle.setOptions({{fillOpacity: 0.3, strokeWeight: 4}});
-    }});
-
-    kakao.maps.event.addListener(circle, 'mouseout', function() {{
-        circle.setOptions({{fillOpacity: 0.15, strokeWeight: 3}});
-    }});
-
-    // 마커 클러스터러 및 매장 마커 생성 (기존 코드 유지)
-    var clusterer = new kakao.maps.MarkerClusterer({{
-        map: map,
-        averageCenter: true,
-        minLevel: 5,
-        disableClickZoom: false,
-        styles: [{{
-            width: '53px', height: '52px',
-            background: 'url(//t1.daumcdn.net/localimg/localimages/07/mapapidoc/red1.png) no-repeat',
-            color: '#fff', textAlign: 'center', fontWeight: 'bold', lineHeight: '53px'
-        }}, {{
-            width: '56px', height: '55px', 
-            background: 'url(//t1.daumcdn.net/localimg/localimages/07/mapapidoc/red2.png) no-repeat',
-            color: '#fff', textAlign: 'center', fontWeight: 'bold', lineHeight: '56px'
-        }}, {{
-            width: '66px', height: '65px',
-            background: 'url(//t1.daumcdn.net/localimg/localimages/07/mapapidoc/red3.png) no-repeat',
-            color: '#fff', textAlign: 'center', fontWeight: 'bold', lineHeight: '66px'
-        }}]
-    }});
-
-    var markersData = {markers_json};
-    var markers = [];
-
-    for (var i = 0; i < markersData.length; i++) {{
-        var data = markersData[i];
-        var marker = new kakao.maps.Marker({{
-            position: new kakao.maps.LatLng(data.lat, data.lng)
-        }});
-
-        var infowindow = new kakao.maps.InfoWindow({{
-            content: '<div style="padding:10px;min-width:200px;">' +
-                     '<strong>' + data.name + '</strong><br/>' +
-                     '<span style="font-size:12px;">업종: ' + data.industry_code + '</span><br/>' +
-                     '<span style="font-size:12px;">주소: ' + data.address + '</span><br/>' +
-                     '<span style="font-size:12px;">거리: ' + data.distance.toFixed(2) + 'km</span>' +
-                     '</div>'
-        }});
-
-        (function(marker, infowindow) {{
-            kakao.maps.event.addListener(marker, 'click', function() {{
-                infowindow.open(map, marker);
-            }});
-        }})(marker, infowindow);
-
-        markers.push(marker);
-    }}
-
-    clusterer.addMarkers(markers);
-
-    if (markers.length > 0) {{
-        var bounds = new kakao.maps.LatLngBounds();
-        bounds.extend(userPosition);
-
-        for (var i = 0; i < markersData.length; i++) {{
-            bounds.extend(new kakao.maps.LatLng(markersData[i].lat, markersData[i].lng));
+        function hideLoading() {{
+            const loading = document.getElementById('loading');
+            if (loading) loading.style.display = 'none';
+        }}
+        function showError(message) {{
+            hideLoading();
+            document.getElementById('map').innerHTML = '<div class="error">❌ ' + message + '</div>';
         }}
 
-        map.setBounds(bounds);
-    }}
-</script>
+        window.onerror = function(msg) {{
+            showError('JavaScript 오류: ' + msg);
+            return true;
+        }};
 
+        kakao.maps.load(function() {{
+            try {{
+                hideLoading();
+                
+                var mapContainer = document.getElementById('map');
+                var mapOption = {{
+                    center: new kakao.maps.LatLng({user_lat}, {user_lon}),
+                    level: 5
+                }};
+                var map = new kakao.maps.Map(mapContainer, mapOption);
+
+                // --- 내 위치 마커 ---
+                var userPosition = new kakao.maps.LatLng({user_lat}, {user_lon});
+                var userMarker = new kakao.maps.Marker({{
+                    position: userPosition,
+                    image: new kakao.maps.MarkerImage(
+                        'https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/marker_red.png',
+                        new kakao.maps.Size(50, 50),
+                        new kakao.maps.Point(25, 50)
+                    )
+                }});
+                userMarker.setMap(map);
+                var userInfowindow = new kakao.maps.InfoWindow({{
+                    content: '<div style="padding:5px;font-size:12px;">🏠 내 위치</div>'
+                }});
+                userInfowindow.open(map, userMarker);
+
+                // --- 검색 반경 원 ---
+                var circle = new kakao.maps.Circle({{
+                    center: userPosition,
+                    radius: {max_distance * 1000},
+                    strokeWeight: 2,
+                    strokeColor: '#FF0000',
+                    strokeOpacity: 0.8,
+                    strokeStyle: 'dashed',
+                    fillColor: '#FF0000',
+                    fillOpacity: 0.1
+                }});
+                circle.setMap(map);
+
+                // --- 마커 데이터 ---
+                var markersData = {markers_json};
+                var markers = [];
+
+                for (var i = 0; i < markersData.length; i++) {{
+                    var data = markersData[i];
+                    var marker = new kakao.maps.Marker({{
+                        position: new kakao.maps.LatLng(data.lat, data.lng)
+                    }});
+
+                    var infowindow = new kakao.maps.InfoWindow({{
+                        content: '<div style="padding:10px;min-width:200px;">' +
+                                '<strong>' + data.name + '</strong><br/>' +
+                                '<span style="font-size:12px;">업종: ' + data.industry_code + '</span><br/>' +
+                                '<span style="font-size:12px;">주소: ' + data.address + '</span><br/>' +
+                                '<span style="font-size:12px;">거리: ' + data.distance.toFixed(2) + 'km</span>' +
+                                '</div>'
+                    }});
+
+                    (function(marker, infowindow) {{
+                        kakao.maps.event.addListener(marker, 'click', function() {{
+                            infowindow.open(map, marker);
+                        }});
+                    }})(marker, infowindow);
+
+                    markers.push(marker);
+                }}
+
+                // --- 개선된 클러스터러 ---
+                var clusterer = new kakao.maps.MarkerClusterer({{
+                    map: map,
+                    averageCenter: true,
+                    minLevel: 5,
+                    minClusterSize: 3,
+                    disableClickZoom: false,
+                    styles: [
+                        {{
+                            width: '50px', height: '50px',
+                            background: 'rgba(0, 102, 255, 0.8)',
+                            borderRadius: '25px',
+                            color: 'white',
+                            textAlign: 'center',
+                            lineHeight: '50px',
+                            fontWeight: 'bold',
+                            fontSize: '16px',
+                            boxShadow: '0 0 10px rgba(0,0,0,0.3)'
+                        }},
+                        {{
+                            width: '60px', height: '60px',
+                            background: 'rgba(255, 140, 0, 0.8)',
+                            borderRadius: '30px',
+                            color: 'white',
+                            textAlign: 'center',
+                            lineHeight: '60px',
+                            fontWeight: 'bold',
+                            fontSize: '18px',
+                            boxShadow: '0 0 12px rgba(0,0,0,0.3)'
+                        }},
+                        {{
+                            width: '70px', height: '70px',
+                            background: 'rgba(255, 69, 0, 0.85)',
+                            borderRadius: '35px',
+                            color: 'white',
+                            textAlign: 'center',
+                            lineHeight: '70px',
+                            fontWeight: 'bold',
+                            fontSize: '20px',
+                            boxShadow: '0 0 15px rgba(0,0,0,0.4)'
+                        }}
+                    ]
+                }});
+
+                clusterer.addMarkers(markers);
+
+                // --- 지도 범위 조정 ---
+                if (markers.length > 0) {{
+                    var bounds = new kakao.maps.LatLngBounds();
+                    bounds.extend(userPosition);
+                    for (var i = 0; i < markersData.length; i++) {{
+                        bounds.extend(new kakao.maps.LatLng(markersData[i].lat, markersData[i].lng));
+                    }}
+                    map.setBounds(bounds);
+                }}
+
+            }} catch (error) {{
+                console.error('지도 생성 오류:', error);
+                showError('지도 생성 중 오류가 발생했습니다: ' + error.message);
+            }}
+        }});
+    </script>
 </body>
 </html>
 """
 
     return kakao_map_html
 
+    # 마커 데이터를 JSON 형태로 준비 (안전하게 처리)
+    markers_data = []
+    for idx, row in filtered_df.iterrows():
+        try:
+            if pd.notnull(row['latitude']) and pd.notnull(row['longitude']):
+                # HTML 이스케이프 처리로 XSS 방지
+                markers_data.append({
+                    'lat': float(row['latitude']),
+                    'lng': float(row['longitude']),
+                    'name': html.escape(str(row['store_name'])[:50]),
+                    'address': html.escape(str(row['full_address'])[:100]),
+                    'industry_code': html.escape(str(row['industry_code'])),
+                    'distance': round(float(row['distance']), 2)
+                })
+        except Exception as e:
+            # 개별 마커 오류는 무시하고 계속 진행
+            continue
 
-# --- 헤더 ---
+    if not markers_data:
+        return "<div style='padding:20px; text-align:center;'>📍 표시할 매장이 없습니다.</div>"
+
+    # JSON 안전하게 생성
+    try:
+        markers_json = json.dumps(markers_data, ensure_ascii=False)
+    except Exception as e:
+        st.error(f"JSON 데이터 생성 오류: {e}")
+        return "<div style='padding:20px; text-align:center; color:red;'>❌ 데이터 처리 오류</div>"
+
+    kakao_map_html = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>카카오맵 - 민생회복 소비쿠폰 사용처</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        html, body {{
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }}
+        #map {{
+            width: 100%;
+            height: 600px;
+        }}
+        #loading {{
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            text-align: center;
+            font-family: Arial, sans-serif;
+        }}
+        .error {{
+            color: red;
+            padding: 20px;
+            text-align: center;
+            font-family: Arial, sans-serif;
+        }}
+    </style>
+</head>
+<body>
+    <div id="loading">
+        🗺️ 지도 로딩 중...<br>
+        <small>잠시만 기다려주세요</small>
+    </div>
+    <div id="map"></div>
+
+    <!-- 🔑 핵심: autoload=false 추가 -->
+    <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey={kakao_api_key}&libraries=services,clusterer&autoload=false"></script>
+    <script>
+        console.log('스크립트 로딩 시작');
+        
+        function hideLoading() {{
+            const loading = document.getElementById('loading');
+            if (loading) loading.style.display = 'none';
+        }}
+        
+        function showError(message) {{
+            hideLoading();
+            document.getElementById('map').innerHTML = '<div class="error">❌ ' + message + '</div>';
+            console.error(message);
+        }}
+        
+        // 전역 오류 처리
+        window.onerror = function(msg, url, line, col, error) {{
+            showError('JavaScript 오류: ' + msg);
+            return true;
+        }};
+        
+        // 🔑 핵심: kakao.maps.load() 함수 사용!
+        try {{
+            if (typeof kakao === 'undefined') {{
+                throw new Error('카카오맵 스크립트가 로드되지 않았습니다. API 키를 확인해주세요.');
+            }}
+            
+            console.log('카카오 객체 확인 완료');
+            
+            // 여기가 핵심! kakao.maps.load() 콜백 안에서 모든 지도 관련 코드 실행
+            kakao.maps.load(function() {{
+                console.log('카카오맵 라이브러리 로딩 완료');
+                
+                try {{
+                    hideLoading();
+                    
+                    // 지도 생성
+                    var mapContainer = document.getElementById('map');
+                    var mapOption = {{
+                        center: new kakao.maps.LatLng({user_lat}, {user_lon}),
+                        level: 5
+                    }};
+                    var map = new kakao.maps.Map(mapContainer, mapOption);
+                    
+                    console.log('지도 생성 완료');
+
+                    // 내 위치 마커
+                    var userPosition = new kakao.maps.LatLng({user_lat}, {user_lon});
+                    var userMarker = new kakao.maps.Marker({{
+                        position: userPosition,
+                        image: new kakao.maps.MarkerImage(
+                            'https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/marker_red.png',
+                            new kakao.maps.Size(50, 50),
+                            new kakao.maps.Point(25, 50)
+                        )
+                    }});
+                    userMarker.setMap(map);
+
+                    // 내 위치 정보창
+                    var userInfowindow = new kakao.maps.InfoWindow({{
+                        content: '<div style="padding:5px;font-size:12px;">🏠 내 위치</div>'
+                    }});
+                    userInfowindow.open(map, userMarker);
+
+                    // 검색 반경 원
+                    var circle = new kakao.maps.Circle({{
+                        center: userPosition,
+                        radius: {max_distance * 1000},
+                        strokeWeight: 2,
+                        strokeColor: '#FF0000',
+                        strokeOpacity: 0.8,
+                        strokeStyle: 'dashed',
+                        fillColor: '#FF0000',
+                        fillOpacity: 0.1
+                    }});
+                    circle.setMap(map);
+
+                    // 마커 클러스터러 생성 (조건부)
+                    var clusterer = null;
+                    var markersData = {markers_json};
+                    
+                    console.log('매장 데이터 수:', markersData.length);
+                    
+                    if (typeof kakao.maps.MarkerClusterer !== 'undefined' && markersData.length > 50) {{
+                        clusterer = new kakao.maps.MarkerClusterer({{
+                            map: map,
+                            averageCenter: true,
+                            minLevel: 5,
+                            disableClickZoom: false,
+                            styles: [{{
+                                width: '53px', height: '52px',
+                                background: 'url(//t1.daumcdn.net/localimg/localimages/07/mapapidoc/red1.png) no-repeat',
+                                color: '#fff', textAlign: 'center', fontWeight: 'bold', lineHeight: '53px'
+                            }}, {{
+                                width: '56px', height: '55px', 
+                                background: 'url(//t1.daumcdn.net/localimg/localimages/07/mapapidoc/red2.png) no-repeat',
+                                color: '#fff', textAlign: 'center', fontWeight: 'bold', lineHeight: '56px'
+                            }}, {{
+                                width: '66px', height: '65px',
+                                background: 'url(//t1.daumcdn.net/localimg/localimages/07/mapapidoc/red3.png) no-repeat',
+                                color: '#fff', textAlign: 'center', fontWeight: 'bold', lineHeight: '66px'
+                            }}]
+                        }});
+                        console.log('마커 클러스터러 생성 완료');
+                    }} else {{
+                        console.log('마커 클러스터러 사용하지 않음 (매장 수: ' + markersData.length + ')');
+                    }}
+
+                    // 매장 마커들 생성
+                    var markers = [];
+                    for (var i = 0; i < markersData.length; i++) {{
+                        try {{
+                            var data = markersData[i];
+                            var marker = new kakao.maps.Marker({{
+                                position: new kakao.maps.LatLng(data.lat, data.lng)
+                            }});
+
+                            // 인포윈도우 생성
+                            var infowindow = new kakao.maps.InfoWindow({{
+                                content: '<div style="padding:10px;min-width:200px;">' +
+                                        '<strong>' + data.name + '</strong><br/>' +
+                                        '<span style="font-size:12px;">업종: ' + data.industry_code + '</span><br/>' +
+                                        '<span style="font-size:12px;">주소: ' + data.address + '</span><br/>' +
+                                        '<span style="font-size:12px;">거리: ' + data.distance.toFixed(2) + 'km</span>' +
+                                        '</div>'
+                            }});
+
+                            // 마커 클릭 이벤트
+                            (function(marker, infowindow) {{
+                                kakao.maps.event.addListener(marker, 'click', function() {{
+                                    infowindow.open(map, marker);
+                                }});
+                            }})(marker, infowindow);
+
+                            markers.push(marker);
+                        }} catch (e) {{
+                            console.error('마커 생성 오류:', e);
+                        }}
+                    }}
+
+                    // 마커들을 지도에 추가
+                    if (clusterer) {{
+                        clusterer.addMarkers(markers);
+                        console.log('클러스터러에 마커 추가 완료');
+                    }} else {{
+                        // 클러스터러가 없으면 직접 추가
+                        for (var i = 0; i < markers.length; i++) {{
+                            markers[i].setMap(map);
+                        }}
+                        console.log('지도에 마커 직접 추가 완료');
+                    }}
+
+                    // 지도 범위 조정
+                    if (markers.length > 0) {{
+                        var bounds = new kakao.maps.LatLngBounds();
+                        bounds.extend(userPosition);
+
+                        for (var i = 0; i < markersData.length; i++) {{
+                            bounds.extend(new kakao.maps.LatLng(markersData[i].lat, markersData[i].lng));
+                        }}
+
+                        map.setBounds(bounds);
+                        console.log('지도 범위 조정 완료');
+                    }}
+                    
+                    console.log('🎉 모든 지도 초기화 완료!');
+                    
+                }} catch (error) {{
+                    console.error('지도 생성 오류:', error);
+                    showError('지도 생성 중 오류가 발생했습니다: ' + error.message);
+                }}
+            }});
+            
+        }} catch (error) {{
+            console.error('카카오맵 초기화 오류:', error);
+            showError('카카오맵을 초기화할 수 없습니다: ' + error.message);
+        }}
+    </script>
+</body>
+</html>
+"""
+
+    return kakao_map_html
+
+# --- 환경 변수 로드 ---
 st.title("💸 민생회복 소비쿠폰 사용처 찾기")
 st.markdown("**쿠폰 사용 가능 매장을 카카오맵에서 한눈에 확인하고, 내 주변 가까운 곳을 찾아보세요!**")
 
@@ -372,37 +676,18 @@ selected_industry_code = st.sidebar.selectbox("업종코드 선택", all_industr
 st.sidebar.markdown("---")
 st.sidebar.header("📍 내 위치 설정")
 
-address_input = st.sidebar.text_input("주소로 위치 검색", placeholder="예: 서울특별시 중구 세종대로 110")
-# 주소 → 좌표 변환 함수 추가
-def address_to_coords(address, kakao_api_key):
-    import requests
-
-    url = f'https://dapi.kakao.com/v2/local/search/address.json?query={address}'
-    headers = {'Authorization': f'KakaoAK {kakao_api_key}'}
-    response = requests.get(url, headers=headers)
-
-    if response.status_code == 200 and response.json()['documents']:
-        result = response.json()['documents'][0]
-        return float(result['y']), float(result['x'])
-    else:
-        st.sidebar.error("주소를 찾을 수 없습니다. 다시 입력해주세요.")
-        return None
-
-# 주소 입력 처리
-if address_input and st.sidebar.button("주소로 위치 설정"):
-    coords = address_to_coords(address_input, KAKAO_MAP_API_KEY)
-    if coords:
-        st.session_state.user_location = coords
-        st.sidebar.success("위치가 설정되었습니다!")
-
-# 사용자 위치 초기 설정
 if 'user_location' not in st.session_state:
-    st.session_state.user_location = (37.5665, 126.9780)  # 서울 시청 (기본 위치)
+    st.session_state.user_location = (37.5665, 126.9780)  # 서울 시청
 
-user_lat, user_lon = st.session_state.user_location
+col1, col2 = st.sidebar.columns(2)
+user_lat = col1.number_input("위도", value=st.session_state.user_location[0], format="%.4f")
+user_lon = col2.number_input("경도", value=st.session_state.user_location[1], format="%.4f")
 
-# 거리 슬라이더 추가 (반경 설정을 위한 필수 입력)
 max_distance = st.sidebar.slider("내 위치에서 최대 거리 (km)", 0.5, 20.0, 5.0, 0.5)
+
+if st.sidebar.button("내 위치로 지도 이동"):
+    st.session_state.user_location = (user_lat, user_lon)
+    st.sidebar.success("위치가 설정되었습니다!")
 
 # --- 데이터 필터링 ---
 filtered_df = df_shops.copy()
@@ -449,18 +734,40 @@ with col4:
     st.metric("지역구 수", len(filtered_df['district'].unique()) if not filtered_df.empty else 0)
 
 # --- 탭으로 구분된 뷰 ---
-tab1, tab2, tab3 = st.tabs(["🗺️ 카카오맵 보기", "📋 리스트 보기", "📊 통계"])
+tab1, tab2, tab3, tab4 = st.tabs(["🗺️ 카카오맵 보기", "📋 리스트 보기", "📊 통계", "📈 성동구청 크롤링 분석"])
 
 with tab1:
     st.subheader("📍 카카오맵으로 매장 위치 확인")
 
     if not filtered_df.empty:
-        with st.spinner(f'🗺️ {len(filtered_df)}개 매장의 카카오맵을 생성하는 중...'):
-            kakao_map_html = create_kakao_map(filtered_df, user_lat, user_lon, max_distance, KAKAO_MAP_API_KEY)
+        # API 키 재확인
+        if not KAKAO_MAP_API_KEY:
+            st.error("🔑 카카오 맵 API 키가 없어서 지도를 표시할 수 없습니다.")
+            st.info("💡 해결 방법:")
+            st.code("""
+1. .env 파일 생성 또는 확인
+2. 다음 내용 추가: KAKAO_MAP_API_KEY=your_actual_api_key
+3. 카카오 개발자 센터에서 API 키 발급: https://developers.kakao.com/
+            """)
+        else:
+            with st.spinner(f'🗺️ {len(filtered_df)}개 매장의 카카오맵을 생성하는 중...'):
+                try:
+                    # 🔑 핵심: 수정된 함수 사용
+                    kakao_map_html = create_kakao_map(filtered_df, user_lat, user_lon, max_distance, KAKAO_MAP_API_KEY)
+                    
+                    components.html(kakao_map_html, height=650)
+                    
+                except Exception as e:
+                    st.error(f"❌ 지도 생성 중 오류 발생: {e}")
+                    st.info("🔧 해결책:")
+                    st.code("""
+1. 브라우저 새로고침 (Ctrl+F5)
+2. 다른 브라우저에서 시도
+3. 카카오 개발자센터에서 도메인 등록 확인
+4. API 키 재발급
+                    """)
 
-            components.html(kakao_map_html, height=650)
-
-        st.info(f"✅ 총 {len(filtered_df)}개의 매장이 지도에 표시되었습니다. 마커를 클릭하면 상세 정보를 볼 수 있습니다.")
+            st.info(f"✅ 총 {len(filtered_df)}개의 매장이 지도에 표시되었습니다. 마커를 클릭하면 상세 정보를 볼 수 있습니다.")
     else:
         st.warning("필터 조건에 맞는 매장이 없습니다. 검색 조건을 조정해 주세요.")
 
@@ -496,15 +803,39 @@ with tab3:
     
     # data_analysis 모듈의 분석 함수 호출
     if not filtered_df.empty:
-        # 전체 데이터를 사용한 종합 분석
-        generate_analysis(df_shops)
+        try:
+            # 전체 데이터를 사용한 종합 분석
+            generate_analysis(df_shops)
+        except Exception as e:
+            st.error(f"통계 분석 중 오류가 발생했습니다: {e}")
+            st.info("기본 통계 정보를 표시합니다.")
+            
+            # 기본 통계 정보 표시
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.subheader("지역구별 매장 수")
+                district_counts = df_shops['district'].value_counts()
+                st.bar_chart(district_counts)
+                
+            with col2:
+                st.subheader("업종별 매장 수")
+                industry_counts = df_shops['industry_code'].value_counts().head(10)
+                st.bar_chart(industry_counts)
     else:
         st.warning("조건에 맞는 매장이 없어서 기본 통계를 표시합니다.")
         # 필터링된 데이터가 없어도 전체 데이터로 분석
         if not df_shops.empty:
-            generate_analysis(df_shops)
+            try:
+                generate_analysis(df_shops)
+            except Exception as e:
+                st.error(f"통계 분석 중 오류가 발생했습니다: {e}")
         else:
             st.error("데이터를 불러올 수 없습니다.")
+
+with tab4:
+    run_sungdong_analysis()
+
 
 # --- 푸터 ---
 st.markdown("---")

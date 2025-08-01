@@ -9,3 +9,8 @@ streamlit-folium>=0.13.0
 requests
 geopy
 python-dotenv
+selenium
+beautifulsoup4
+wordcloud
+lxml
+wordcloud
