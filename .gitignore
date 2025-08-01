@@ -1,5 +1,10 @@
-.env
 __pycache__/
+.env
 *.ipynb_checkpoints
 .DS_Store
 *.sqlite3
+secrets.txt
+node_modules/
+*.xlsx
+*.csv
+.csv
