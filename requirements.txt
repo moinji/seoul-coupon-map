@@ -13,4 +13,4 @@ selenium
 beautifulsoup4
 wordcloud
 lxml
-wordcloud
+streamlit-javascript
