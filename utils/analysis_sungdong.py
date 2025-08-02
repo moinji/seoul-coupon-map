@@ -19,7 +19,7 @@ import re
 
 sns.set_style("whitegrid")
 
-def crawl_shops_sungdong(output_path='data/shops_sungdong.csv', max_pages=2):
+def crawl_shops_sungdong(output_path='./data/shops_sungdong.csv', max_pages=2):
     chrome_options = Options()
     chrome_options.add_argument('--headless')
     chrome_options.add_argument('--no-sandbox')
@@ -59,7 +59,7 @@ def crawl_shops_sungdong(output_path='data/shops_sungdong.csv', max_pages=2):
         driver.quit()
 
     df = pd.DataFrame(result_list)
-        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
     df.to_csv(output_path, index=False, encoding='utf-8-sig')
     return df
 
@@ -106,7 +106,6 @@ def render_bar_chart(data, title, xlabel, ylabel="", color="skyblue", rotate=30,
 
 
 def run_sungdong_analysis():
-    # 👁️ 데이터 흐름 설명 출력
     st.markdown("## 🔍 데이터 흐름 요약")
     st.info("데이터 흐름: 웹스크래핑 → CSV 저장 (shops_sungdong.csv) → CSV 불러오기 → 컬럼 생성 및 전처리 → 분석 및 시각화")
 
@@ -121,13 +120,26 @@ def run_sungdong_analysis():
     title_size = 12 if small_mode else 14
     figsize = (8, chart_height / 100)
 
+    # 사용 데이터 파일 경로
+    csv_path = "./data/shops_sungdong.csv"
+
     st.subheader("🏬 성동구청 소비쿠폰 가맹점 데이터 분석")
 
-    csv_path = "data/shops_sungdong.csv"
+    # ✅ CSV 파일이 없으면 크롤링 버튼 제공
     if not os.path.exists(csv_path):
-        st.warning("CSV 파일이 없습니다. 먼저 데이터를 크롤링해주세요.")
-        return
+        st.warning("⚠️ CSV 파일이 없습니다. 데이터를 먼저 수집해주세요.")
 
+        if st.button("🕷️ [크롤링 실행] 성동구청 소비쿠폰 가맹점 데이터 수집"):
+            with st.spinner("크롤링 중..."):
+                try:
+                    df = crawl_shops_sungdong(output_path=csv_path, max_pages=20)
+                    st.success(f"✅ 크롤링 완료! {len(df)}개 매장 수집됨")
+                    st.rerun()  # 크롤링 후 자동 새로고침
+                except Exception as e:
+                    st.error(f"❌ 크롤링 중 오류 발생: {e}")
+        return  # 파일 없으면 이후 분석 로직은 실행하지 않음
+
+    # ✅ CSV가 있을 경우 분석 진행
     df = pd.read_csv(csv_path)
 
     # 데이터 구조 확인
