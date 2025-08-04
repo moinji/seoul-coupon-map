@@ -57,7 +57,7 @@ with col1:
         <div id="map"></div>
         
         <!-- 카카오맵 API 로드 -->
-        <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=9e8e14d3e91f66f04016e81a8448e4c8&libraries=services,clusterer"></script>
+        <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey="Java_Script_Kakao_API_Key"&libraries=services,clusterer"></script>
         
         <script>
             // 지도 생성
