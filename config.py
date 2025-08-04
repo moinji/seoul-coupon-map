@@ -2,10 +2,8 @@
 # config.py
 
 # --- 데이터 파일 경로 ---
-MAIN_DATA_PATH = './data/result11.csv'
 MAIN_DATA_PATH = './data/shops.csv'
 SEONGDONG_DATA_PATH = './data/shops_seongdong.csv'
-SEONGDONG_POPULATION_DATA_PATH = './data/seongdong_population.csv'
 POPULATION_DATA_PATH = './data/district_population.csv'
 AREA_DATA_PATH = './data/district_area_km2.csv'
 
