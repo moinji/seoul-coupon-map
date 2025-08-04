@@ -13,7 +13,6 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-
 # 프로젝트 모듈화 요약
 
 ## 📂 디렉토리 구조 및 파일별 역할
