@@ -61,26 +61,20 @@ def load_and_merge_data():
         st.write(f"인구 데이터: {len(pop_df)}행, 컬럼: {list(pop_df.columns)}")
         
         # 2. 인구 데이터 동 매핑 및 집계
-        st.write("원본 인구 데이터 동 목록:", sorted(pop_df["행정기관"].unique())[:10])
         pop_df["행정기관"] = pop_df["행정기관"].map(DONG_MERGE_MAP).fillna(pop_df["행정기관"])
         pop_df = pop_df.groupby("행정기관", as_index=False).sum(numeric_only=True)
-        st.write("매핑 후 인구 데이터 동 목록:", sorted(pop_df["행정기관"].unique()))
         
         # 3. 가맹점 데이터 동 매핑
         if 'dong' in shop_df.columns:
-            st.write("원본 가맹점 데이터 동 목록:", sorted(shop_df['dong'].unique())[:10])
             shop_df['dong'] = shop_df['dong'].map(DONG_MERGE_MAP).fillna(shop_df['dong'])
-            st.write("매핑 후 가맹점 데이터 동 목록:", sorted(shop_df['dong'].unique()))
         
         # 4. 공통 동 확인
         shop_dongs = set(shop_df['dong'].unique()) if 'dong' in shop_df.columns else set()
         pop_dongs = set(pop_df['행정기관'].unique())
         common_dongs = shop_dongs.intersection(pop_dongs)
-        st.write(f"🔗 공통 동: {len(common_dongs)}개 - {sorted(common_dongs)}")
         
         # 5. 데이터 병합
         merged_df = pd.merge(shop_df, pop_df, left_on="dong", right_on="행정기관", how="left")
-        st.write(f"병합 후: {len(merged_df)}행, 총인구수 유효한 행: {merged_df['총인구수'].notna().sum()}개")
         
         return shop_df, pop_df, merged_df
         
@@ -227,7 +221,7 @@ def run_seongdong_analysis():
         """)
         mapping_df = pd.DataFrame(list(DONG_MERGE_MAP.items()), columns=['행정동', '통합동'])
         st.dataframe(mapping_df, use_container_width=True)
-        
+        st.write(f"데이터 병합 후: {len(merged_df)}행, 총인구수 유효한 행: {merged_df['총인구수'].notna().sum()}개")
         st.markdown("### 🛠️ 전처리 흐름")
         st.markdown("""
         1. **데이터 수집**: 웹 크롤링으로 가맹점 데이터 수집
