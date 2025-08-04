@@ -1,0 +1,63 @@
+Windows 볼륨에 대한 폴더 경로의 목록입니다.
+볼륨 일련 번호는 FA9A-7A67입니다.
+C:.
+|   .env
+|   .gitignore
+|   app.py
+|   config.py
+|   folder_structure.txt
+|   README.md
+|   requirements.txt
+|   
++---analysis
+|   |   main_analysis.py
+|   |   seongdong_analysis.py
+|   |   seongdong_analysis_updated.py
+|   |   
+|   \---__pycache__
+|           main_analysis.cpython-312.pyc
+|           seongdong_analysis.cpython-312.pyc
+|           
++---components
+|   |   kakao_map.py
+|   |   ui.py
+|   |   
+|   \---__pycache__
+|           kakao_map.cpython-312.pyc
+|           ui.cpython-312.pyc
+|           
++---data
+|   |   district_area_km2.csv
+|   |   district_population.csv
+|   |   result11.csv
+|   |   Seongdong_Population.csv
+|   |   shops.csv
+|   |   shops_seongdong.csv
+|   |   
+|   \---raw
+|           서울특별시_성동구_일반음식점현황_20240814.csv
+|           성동_인구 및 세대현황.xlsx
+|           
++---services
+|   |   kakao_api.py
+|   |   seongdong_scraper.py
+|   |   
+|   \---__pycache__
+|           kakao_api.cpython-312.pyc
+|           seongdong_scraper.cpython-312.pyc
+|           
++---utils
+|   |   data_loader.py
+|   |   helpers.py
+|   |   __init__.py
+|   |   
+|   \---__pycache__
+|           analysis_sungdong.cpython-312.pyc
+|           data_analysis.cpython-312.pyc
+|           data_loader.cpython-312.pyc
+|           helpers.cpython-312.pyc
+|           __init__.cpython-312.pyc
+|           
+\---__pycache__
+        config.cpython-312.pyc
+        
