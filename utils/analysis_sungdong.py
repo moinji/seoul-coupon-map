@@ -159,19 +159,39 @@ def run_sungdong_analysis():
     df['franchise'] = df['store_name'].apply(is_franchise)
     df['category'] = (df['store_name'] + ' ' + df['address']).apply(guess_category)
 
-    tabs = st.tabs(["📌 가맹점 분포", "🏪 업종 분석", "🏙️ 지역 분석", "🧠 요약 지표"])
+    tabs = st.tabs(["📌 데이터 요약", "🏪 업종 분석", "🏙️ 지역 분석", "🧠 요약 지표"])
 
     with tabs[0]:
-        st.markdown("### 자치구별 가맹점 비율")
-        district_counts = df['district'].value_counts()
-        fig, ax = plt.subplots(figsize=figsize)
-        district_counts.plot.pie(autopct='%1.1f%%', startangle=90, ax=ax)
-        ax.set_ylabel("")
-        ax.set_title("자치구별 비율", fontsize=title_size)
-        plt.tight_layout()
-        st.pyplot(fig)
-        st.markdown("### 분석 요약")
-        st.write("- 성동구 외 타 자치구 데이터 포함 여부 확인 필요")
+        st.markdown("### 🧾 성동구 소비쿠폰 데이터 요약 지표")
+
+        # ✅ 핵심 지표 메트릭
+        col1, col2, col3, col4 = st.columns(4)
+
+        total_shops = len(df)
+        unique_dong = df['dong'].nunique()
+        franchise_rate = df['franchise'].mean() * 100
+        unique_categories = df['category'].nunique()
+
+        col1.metric("🏪 총 매장 수", f"{total_shops:,} 개")
+        col2.metric("📍 동 종류 수", f"{unique_dong} 개")
+        col3.metric("🏷️ 프랜차이즈 비율", f"{franchise_rate:.1f} %")
+        col4.metric("🗂️ 업종 종류 수", f"{unique_categories} 개")
+
+        st.markdown("---")
+
+        # 🛠️ 결측치 확인
+        st.markdown("#### 🧼 결측치 현황")
+        missing = df.isnull().sum()
+        missing = missing[missing > 0]
+
+        if not missing.empty:
+            st.dataframe(missing.rename("결측치 개수").to_frame())
+        else:
+            st.success("✅ 결측치 없음")
+
+        st.markdown("---")
+        st.markdown("💡 위 지표는 성동구청 소비쿠폰 가맹점 데이터를 기반으로 자동 계산된 통계입니다.")
+
 
     with tabs[1]:
         col1, col2 = st.columns(2)
