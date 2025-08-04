@@ -320,21 +320,6 @@ def run_seongdong_analysis():
             with col2:
                 min_dong = store_counts.iloc[-1]
                 st.warning(f"🔻 **가장 적은 동**: {min_dong['dong']} ({min_dong['매장수']}개)")
-        
-        # 매장 분포 히스토그램
-        if len(store_counts) > 1:
-            st.markdown("#### 📈 매장 수 분포")
-            fig, ax = plt.subplots(figsize=(10, 4))
-            plt.hist(store_counts['매장수'], bins=min(10, len(store_counts)), alpha=0.7, color='skyblue', edgecolor='black')
-            plt.title('동별 매장 수 분포')
-            plt.xlabel('매장 수')
-            plt.ylabel('동의 개수')
-            plt.tight_layout()
-            st.pyplot(fig)
-        
-        # 데이터 테이블 표시
-        st.markdown("#### 📋 동별 매장 수 상세")
-        st.dataframe(store_counts, use_container_width=True)
     
     with tab3:
         st.markdown("### 🔄 인구 + 가맹점 통합 분석")
@@ -688,6 +673,18 @@ def run_seongdong_analysis():
                 st.markdown("#### 📊 군집별 평균 특성")
                 cluster_summary = pop_df_clustered.groupby('군집')[available_features].mean().round(1)
                 st.dataframe(cluster_summary, use_container_width=True)
+                
+                # 군집별 동 목록 표시 (추가할 부분)
+                st.markdown("#### 🏘️ 군집별 동 구성")
+                for cluster_id in sorted(pop_df_clustered['군집'].unique()):
+                    cluster_dongs = pop_df_clustered[pop_df_clustered['군집'] == cluster_id]['행정기관'].tolist()
+                    dong_list = ', '.join(cluster_dongs)
+                    
+                    # 군집별 색상 매칭
+                    colors = ['🔴', '🟢', '🔵', '🟠']
+                    color_icon = colors[cluster_id] if cluster_id < len(colors) else '⚪'
+                    
+                    st.info(f"{color_icon} **군집 {cluster_id}** ({len(cluster_dongs)}개 동): {dong_list}")
                 
                 # 군집별 평균 매장 밀도
                 if len(valid_merged) > 0:
