@@ -81,6 +81,7 @@ def create_tabs(filtered_df, df_shops, user_lat, user_lon, max_distance, KAKAO_M
 
     with tab3:
         st.subheader("📊 통계 정보")
+        st.subheader("📊 서울시 소비쿠폰 가맹점 통계 분석")
         if not filtered_df.empty:
             try:
                 generate_analysis(df_shops)
