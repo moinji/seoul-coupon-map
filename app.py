@@ -22,7 +22,6 @@ import warnings
 import platform
 import altair as alt 
 
-
 def configure_matplotlib_fonts():
     """matplotlib 한글 폰트 설정"""
     try:
@@ -647,7 +646,7 @@ with col4:
     st.metric("지역구 수", len(filtered_df['district'].unique()) if not filtered_df.empty else 0)
 
 # --- 탭으로 구분된 뷰 ---
-tab1, tab2, tab3 = st.tabs(["🗺️ 카카오맵 보기", "📋 리스트 보기", "📊 통계"])
+tab1, tab2, tab3, tab4 = st.tabs(["🗺️ 카카오맵 보기", "📋 리스트 보기", "📊 통계", "📈 성동구청 크롤링 분석"])
 
 with tab1:
     st.subheader("📍 카카오맵으로 매장 위치 확인")
@@ -829,6 +828,20 @@ with tab3:
                 st.error(f"통계 분석 중 오류가 발생했습니다: {e}")
         else:
             st.error("데이터를 불러올 수 없습니다.")
+        
+
+with tab4:
+    st.subheader("📈 성동구청 크롤링 분석")
+    
+    try:
+        from utils.analysis_sungdong import run_sungdong_analysis
+        run_sungdong_analysis()
+    except ImportError:
+        st.warning("⚠️ 분석 함수를 찾을 수 없습니다.")
+        st.info("💡 현재 개발 중인 기능입니다.")
+    except Exception as e:
+        st.error(f"❌ 오류: {e}")
+        
 # --- 푸터 ---
 st.markdown("---")
 st.markdown("🔧 **카카오맵 API**를 활용한 민생회복 소비쿠폰 사용처 검색 서비스")
