@@ -104,17 +104,60 @@ def run_seongdong_analysis():
 
     tabs = st.tabs(["📌 가맹점 분포", "🏪 업종 분석", "🏙️ 지역 분석", "🧠 요약 지표"])
 
-    with tabs[0]:
-        st.markdown("### 자치구별 가맹점 비율")
-        district_counts = df['district'].value_counts()
-        fig, ax = plt.subplots(figsize=figsize)
-        district_counts.plot.pie(autopct='%1.1f%%', startangle=90, ax=ax)
-        ax.set_ylabel("")
-        ax.set_title("자치구별 비율", fontsize=title_size)
+        # -------------------- [NEW] tab0: 인구 + 가맹점 요약 --------------------
+    tab0, tab1, tab2, tab3 = tabs
+
+    with tab0:
+        st.markdown("### 👥 성동구 인구 & 소비쿠폰 통계 요약")
+
+        # 인구 데이터 불러오기
+        pop_df = pd.read_csv("data/Seongdong_Population.csv")
+        shop_df = pd.read_csv("data/shops_sungdong.csv")
+
+        # 컬럼 이름 정제
+        pop_df.columns = pop_df.columns.str.strip()
+
+        # 메트릭 데이터 계산
+        total_population = int(pop_df["총인구수"].sum())
+        total_shops = len(shop_df)
+        unique_dong_count = shop_df["dong"].nunique()
+        elderly_population = int(pop_df["65세이상"].sum())
+        elderly_ratio = elderly_population / total_population * 100
+        child_ratio = pop_df["5세이하"].sum() / total_population * 100
+
+        # 메트릭 레이아웃
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric("👥 총 인구수", f"{total_population:,}")
+        col2.metric("🏪 총 가맹점 수", f"{total_shops:,}")
+        col3.metric("🏘️ 행정동 수", f"{unique_dong_count:,}")
+        col4.metric("🧓 고령자 비율", f"{elderly_ratio:.1f}%")
+
+        col5, _ = st.columns([1, 3])
+        col5.metric("🧒 5세 이하 유아 비율", f"{child_ratio:.1f}%")
+
+        st.markdown("### 📊 연령별 인구 분포")
+
+        # 시각화 대상 연령 컬럼 선택
+        age_cols = ["5세이하", "18세이상", "65세이상"]
+        age_df = pop_df[age_cols].sum().sort_values()
+
+        # 폰트 설정
+        plt.rcParams["font.family"] = ["Malgun Gothic", "AppleGothic", "NanumGothic", "DejaVu Sans"]
+        plt.rcParams["axes.unicode_minus"] = False
+
+        # 수평 바 차트
+        fig, ax = plt.subplots(figsize=(10, 5))
+        age_df.plot(kind='barh', color='skyblue', ax=ax)
+        ax.set_title("연령대별 인구수 분포", fontsize=13)
+        ax.set_xlabel("인구 수", fontsize=11)
+        ax.set_ylabel("연령대", fontsize=11)
+        for i, v in enumerate(age_df.values):
+            ax.text(v + 100, i, f"{int(v):,}", va='center', fontsize=10)
         plt.tight_layout()
         st.pyplot(fig)
-        st.markdown("### 분석 요약")
-        st.write("- 성동구 외 타 자치구 데이터 포함 여부 확인 필요")
+
+        st.markdown("#### 📌 발표 TIP")
+        st.info("성동구는 **고령 인구 비중(65세 이상)**이 약 **{:.1f}%**이며,\n5세 이하 인구도 {:.1f}%로 보육 수요를 고려한 정책 설계 필요".format(elderly_ratio, child_ratio))
 
     with tabs[1]:
         col1, col2 = st.columns(2)
