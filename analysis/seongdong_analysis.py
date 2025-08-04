@@ -1,14 +1,6 @@
-import time
-import pandas as pd
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.by import By
-from webdriver_manager.chrome import ChromeDriverManager
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 
 import streamlit as st
+import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from collections import Counter
@@ -16,68 +8,22 @@ import numpy as np
 from scipy.stats import entropy
 import os
 import re
+from services.seongdong_scraper import crawl_shops_seongdong
+import config
 
 sns.set_style("whitegrid")
-
-def crawl_shops_seongdong(output_path='./data/shops_seongdong.csv', max_pages=2):
-    chrome_options = Options()
-    chrome_options.add_argument('--headless')
-    chrome_options.add_argument('--no-sandbox')
-    chrome_options.add_argument('--disable-dev-shm-usage')
-    chrome_options.add_argument('--window-size=1920,1080')
-
-    service = Service(ChromeDriverManager().install())
-    driver = webdriver.Chrome(service=service, options=chrome_options)
-
-    base_url = "https://www.sd.go.kr/main/webRecoveryCouponList.do?searchName=&searchEmdNm=&searchAddress=&searchBizRegNo=&key=5269&pageIndex={}"
-
-    result_list = []
-
-    try:
-        for page in range(1, max_pages + 1):
-            driver.get(base_url.format(page))
-            WebDriverWait(driver, 10).until(
-                EC.presence_of_all_elements_located((By.CSS_SELECTOR, "table.table tbody tr"))
-            )
-            rows = driver.find_elements(By.CSS_SELECTOR, "table.table tbody tr")
-            for row in rows:
-                cols = row.find_elements(By.TAG_NAME, "th")
-                if len(cols) < 3:
-                    continue
-                store = {
-                    "store_name": cols[0].text.strip(),
-                    "dong": cols[1].text.strip(),
-                    "address": cols[2].text.strip()
-                }
-                result_list.append(store)
-            time.sleep(0.8)
-
-    except Exception as e:
-        st.error(f"[ERROR] 크롤링 중 에러 발생: {e}")
-
-    finally:
-        driver.quit()
-
-    df = pd.DataFrame(result_list)
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    df.to_csv(output_path, index=False, encoding='utf-8-sig')
-    return df
-
 
 def extract_district(address):
     match = re.search(r"서울특별시 (.*?)구", address)
     return match.group(1) + "구" if match else "확인불가"
 
-
 def near_subway_keywords(text):
     keywords = ["왕십리", "뚝섬", "성수", "서울숲", "한양대"]
     return any(k in text for k in keywords)
 
-
 def is_franchise(store_name):
     franchise_keywords = ["이마트", "GS25", "CU", "세븐일레븐", "미니스톱", "투썸", "스타벅스"]
     return any(k in store_name.upper() for k in franchise_keywords)
-
 
 def guess_category(text):
     category_keywords = {
@@ -92,7 +38,6 @@ def guess_category(text):
             return category
     return "기타"
 
-
 def render_bar_chart(data, title, xlabel, ylabel="", color="skyblue", rotate=30, figsize=(10, 4)):
     fig, ax = plt.subplots(figsize=figsize)
     data.plot(kind="bar", color=color, ax=ax)
@@ -103,14 +48,12 @@ def render_bar_chart(data, title, xlabel, ylabel="", color="skyblue", rotate=30,
     plt.tight_layout()
     st.pyplot(fig)
 
-
-
 def run_seongdong_analysis():
     st.markdown("## 🔍 데이터 흐름 요약")
     st.info("데이터 흐름: 웹스크래핑 → CSV 저장 (shops_seongdong.csv) → CSV 불러오기 → 컬럼 생성 및 전처리 → 분석 및 시각화")
 
     # 파일 설명
-    st.markdown("**사용 데이터 파일:** `shops_seongdong.csv` (성동구청 소비쿠폰 가맹점 목록)")
+    st.markdown(f"**사용 데이터 파일:** `{config.SEONGDONG_DATA_PATH}` (성동구청 소비쿠폰 가맹점 목록)")
 
     st.sidebar.markdown("## 🎤 발표 설정")
     small_mode = st.sidebar.checkbox("발표 모드 (폰트/그래프 축소)", value=False)
@@ -121,7 +64,7 @@ def run_seongdong_analysis():
     figsize = (8, chart_height / 100)
 
     # 사용 데이터 파일 경로
-    csv_path = "./data/shops_seongdong.csv"
+    csv_path = config.SEONGDONG_DATA_PATH
 
     st.subheader("🏬 성동구청 소비쿠폰 가맹점 데이터 분석")
 
