@@ -1,8 +1,10 @@
 import streamlit as st
+# pip install streamlit-bridge
 
 # --- Streamlit 앱 설정 (가장 먼저 실행되어야 함) ---
 st.set_page_config(layout="wide", page_title="민생회복 소비쿠폰 사용처", page_icon="💸")
 
+import requests
 import pandas as pd
 import streamlit.components.v1 as components
 import os
@@ -12,12 +14,14 @@ import json
 import html  # HTML 이스케이프를 위해 추가
 from utils.data_analysis import generate_analysis
 from dotenv import load_dotenv
-
+from urllib.parse import quote
 # matplotlib 한글 폰트 설정
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 import warnings
 import platform
+import altair as alt 
+
 
 def configure_matplotlib_fonts():
     """matplotlib 한글 폰트 설정"""
@@ -161,231 +165,10 @@ def load_and_preprocess_data(csv_path):
 
 # --- 수정된 카카오맵 생성 함수 ---
 def create_kakao_map(filtered_df, user_lat, user_lon, max_distance, kakao_api_key):
-    """가시성이 개선된 카카오맵 HTML 생성 함수"""
-
+    """수정된 카카오맵을 생성하는 함수 - kakao.maps.load() 사용"""
+    
     if not kakao_api_key:
         return "<div style='padding:20px; text-align:center; color:red;'>❌ API 키가 없어서 지도를 표시할 수 없습니다.</div>"
-
-    # --- 마커 데이터 준비 ---
-    markers_data = []
-    for _, row in filtered_df.iterrows():
-        try:
-            if pd.notnull(row['latitude']) and pd.notnull(row['longitude']):
-                markers_data.append({
-                    'lat': float(row['latitude']),
-                    'lng': float(row['longitude']),
-                    'name': html.escape(str(row['store_name'])[:50]),
-                    'address': html.escape(str(row['full_address'])[:100]),
-                    'industry_code': html.escape(str(row['industry_code'])),
-                    'distance': round(float(row['distance']), 2)
-                })
-        except:
-            continue
-
-    if not markers_data:
-        return "<div style='padding:20px; text-align:center;'>📍 표시할 매장이 없습니다.</div>"
-
-    markers_json = json.dumps(markers_data, ensure_ascii=False)
-
-    # --- 카카오맵 HTML ---
-    kakao_map_html = f"""
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <title>카카오맵 - 민생회복 소비쿠폰 사용처</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        html, body {{
-            width: 100%;
-            height: 100%;
-            margin: 0;
-            padding: 0;
-        }}
-        #map {{
-            width: 100%;
-            height: 600px;
-        }}
-        #loading {{
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 1000;
-            background: rgba(255, 255, 255, 0.9);
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            text-align: center;
-            font-family: Arial, sans-serif;
-        }}
-        .error {{
-            color: red;
-            padding: 20px;
-            text-align: center;
-            font-family: Arial, sans-serif;
-        }}
-    </style>
-</head>
-<body>
-    <div id="loading">
-        🗺️ 지도 로딩 중...<br>
-        <small>잠시만 기다려주세요</small>
-    </div>
-    <div id="map"></div>
-
-    <!-- 카카오맵 SDK (autoload=false) -->
-    <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey={kakao_api_key}&libraries=services,clusterer&autoload=false"></script>
-    <script>
-        function hideLoading() {{
-            const loading = document.getElementById('loading');
-            if (loading) loading.style.display = 'none';
-        }}
-        function showError(message) {{
-            hideLoading();
-            document.getElementById('map').innerHTML = '<div class="error">❌ ' + message + '</div>';
-        }}
-
-        window.onerror = function(msg) {{
-            showError('JavaScript 오류: ' + msg);
-            return true;
-        }};
-
-        kakao.maps.load(function() {{
-            try {{
-                hideLoading();
-                
-                var mapContainer = document.getElementById('map');
-                var mapOption = {{
-                    center: new kakao.maps.LatLng({user_lat}, {user_lon}),
-                    level: 5
-                }};
-                var map = new kakao.maps.Map(mapContainer, mapOption);
-
-                // --- 내 위치 마커 ---
-                var userPosition = new kakao.maps.LatLng({user_lat}, {user_lon});
-                var userMarker = new kakao.maps.Marker({{
-                    position: userPosition,
-                    image: new kakao.maps.MarkerImage(
-                        'https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/marker_red.png',
-                        new kakao.maps.Size(50, 50),
-                        new kakao.maps.Point(25, 50)
-                    )
-                }});
-                userMarker.setMap(map);
-                var userInfowindow = new kakao.maps.InfoWindow({{
-                    content: '<div style="padding:5px;font-size:12px;">🏠 내 위치</div>'
-                }});
-                userInfowindow.open(map, userMarker);
-
-                // --- 검색 반경 원 ---
-                var circle = new kakao.maps.Circle({{
-                    center: userPosition,
-                    radius: {max_distance * 1000},
-                    strokeWeight: 2,
-                    strokeColor: '#FF0000',
-                    strokeOpacity: 0.8,
-                    strokeStyle: 'dashed',
-                    fillColor: '#FF0000',
-                    fillOpacity: 0.1
-                }});
-                circle.setMap(map);
-
-                // --- 마커 데이터 ---
-                var markersData = {markers_json};
-                var markers = [];
-
-                for (var i = 0; i < markersData.length; i++) {{
-                    var data = markersData[i];
-                    var marker = new kakao.maps.Marker({{
-                        position: new kakao.maps.LatLng(data.lat, data.lng)
-                    }});
-
-                    var infowindow = new kakao.maps.InfoWindow({{
-                        content: '<div style="padding:10px;min-width:200px;">' +
-                                '<strong>' + data.name + '</strong><br/>' +
-                                '<span style="font-size:12px;">업종: ' + data.industry_code + '</span><br/>' +
-                                '<span style="font-size:12px;">주소: ' + data.address + '</span><br/>' +
-                                '<span style="font-size:12px;">거리: ' + data.distance.toFixed(2) + 'km</span>' +
-                                '</div>'
-                    }});
-
-                    (function(marker, infowindow) {{
-                        kakao.maps.event.addListener(marker, 'click', function() {{
-                            infowindow.open(map, marker);
-                        }});
-                    }})(marker, infowindow);
-
-                    markers.push(marker);
-                }}
-
-                // --- 개선된 클러스터러 ---
-                var clusterer = new kakao.maps.MarkerClusterer({{
-                    map: map,
-                    averageCenter: true,
-                    minLevel: 5,
-                    minClusterSize: 3,
-                    disableClickZoom: false,
-                    styles: [
-                        {{
-                            width: '50px', height: '50px',
-                            background: 'rgba(0, 102, 255, 0.8)',
-                            borderRadius: '25px',
-                            color: 'white',
-                            textAlign: 'center',
-                            lineHeight: '50px',
-                            fontWeight: 'bold',
-                            fontSize: '16px',
-                            boxShadow: '0 0 10px rgba(0,0,0,0.3)'
-                        }},
-                        {{
-                            width: '60px', height: '60px',
-                            background: 'rgba(255, 140, 0, 0.8)',
-                            borderRadius: '30px',
-                            color: 'white',
-                            textAlign: 'center',
-                            lineHeight: '60px',
-                            fontWeight: 'bold',
-                            fontSize: '18px',
-                            boxShadow: '0 0 12px rgba(0,0,0,0.3)'
-                        }},
-                        {{
-                            width: '70px', height: '70px',
-                            background: 'rgba(255, 69, 0, 0.85)',
-                            borderRadius: '35px',
-                            color: 'white',
-                            textAlign: 'center',
-                            lineHeight: '70px',
-                            fontWeight: 'bold',
-                            fontSize: '20px',
-                            boxShadow: '0 0 15px rgba(0,0,0,0.4)'
-                        }}
-                    ]
-                }});
-
-                clusterer.addMarkers(markers);
-
-                // --- 지도 범위 조정 ---
-                if (markers.length > 0) {{
-                    var bounds = new kakao.maps.LatLngBounds();
-                    bounds.extend(userPosition);
-                    for (var i = 0; i < markersData.length; i++) {{
-                        bounds.extend(new kakao.maps.LatLng(markersData[i].lat, markersData[i].lng));
-                    }}
-                    map.setBounds(bounds);
-                }}
-
-            }} catch (error) {{
-                console.error('지도 생성 오류:', error);
-                showError('지도 생성 중 오류가 발생했습니다: ' + error.message);
-            }}
-        }});
-    </script>
-</body>
-</html>
-"""
-
-    return kakao_map_html
 
     # 마커 데이터를 JSON 형태로 준비 (안전하게 처리)
     markers_data = []
@@ -414,6 +197,8 @@ def create_kakao_map(filtered_df, user_lat, user_lon, max_distance, kakao_api_ke
     except Exception as e:
         st.error(f"JSON 데이터 생성 오류: {e}")
         return "<div style='padding:20px; text-align:center; color:red;'>❌ 데이터 처리 오류</div>"
+
+
 
     kakao_map_html = f"""
 <!DOCTYPE html>
@@ -490,7 +275,8 @@ def create_kakao_map(filtered_df, user_lat, user_lon, max_distance, kakao_api_ke
             }}
             
             console.log('카카오 객체 확인 완료');
-            
+
+
             // 여기가 핵심! kakao.maps.load() 콜백 안에서 모든 지도 관련 코드 실행
             kakao.maps.load(function() {{
                 console.log('카카오맵 라이브러리 로딩 완료');
@@ -549,19 +335,22 @@ def create_kakao_map(filtered_df, user_lat, user_lon, max_distance, kakao_api_ke
                         clusterer = new kakao.maps.MarkerClusterer({{
                             map: map,
                             averageCenter: true,
-                            minLevel: 5,
+                            minLevel: 4,
                             disableClickZoom: false,
                             styles: [{{
                                 width: '53px', height: '52px',
-                                background: 'url(//t1.daumcdn.net/localimg/localimages/07/mapapidoc/red1.png) no-repeat',
+                                background: 'rgba(255, 0, 0, 0.4)',
+                                borderRadius: "50%",
                                 color: '#fff', textAlign: 'center', fontWeight: 'bold', lineHeight: '53px'
                             }}, {{
                                 width: '56px', height: '55px', 
-                                background: 'url(//t1.daumcdn.net/localimg/localimages/07/mapapidoc/red2.png) no-repeat',
+                                background: 'rgba(255, 0, 0, 0.4)',
+                                borderRadius: "50%",
                                 color: '#fff', textAlign: 'center', fontWeight: 'bold', lineHeight: '56px'
                             }}, {{
                                 width: '66px', height: '65px',
-                                background: 'url(//t1.daumcdn.net/localimg/localimages/07/mapapidoc/red3.png) no-repeat',
+                                background: 'rgba(255, 0, 0, 0.4)',
+                                borderRadius: "50%",
                                 color: '#fff', textAlign: 'center', fontWeight: 'bold', lineHeight: '66px'
                             }}]
                         }});
@@ -586,12 +375,14 @@ def create_kakao_map(filtered_df, user_lat, user_lon, max_distance, kakao_api_ke
                                         '<span style="font-size:12px;">업종: ' + data.industry_code + '</span><br/>' +
                                         '<span style="font-size:12px;">주소: ' + data.address + '</span><br/>' +
                                         '<span style="font-size:12px;">거리: ' + data.distance.toFixed(2) + 'km</span>' +
-                                        '</div>'
+                                        '</div>',
+                                removable : true
                             }});
 
                             // 마커 클릭 이벤트
                             (function(marker, infowindow) {{
                                 kakao.maps.event.addListener(marker, 'click', function() {{
+                                    console.log(infowindow);
                                     infowindow.open(map, marker);
                                 }});
                             }})(marker, infowindow);
@@ -629,12 +420,28 @@ def create_kakao_map(filtered_df, user_lat, user_lon, max_distance, kakao_api_ke
                     
                     console.log('🎉 모든 지도 초기화 완료!');
                     
+                    // 지도 이동/확대/축소 시 경계 좌표를 Python으로 전송
+                    kakao.maps.event.addListener(map, 'bounds_changed', function() {{
+                        var bounds = map.getBounds();
+                        var swLatlng = bounds.getSouthWest();
+                        var neLatlng = bounds.getNorthEast();
+                        
+                        var boundsData = {{
+                            topLeftLat: neLatlng.getLat(),
+                            topLeftLon: swLatlng.getLng(),
+                            bottomRightLat: swLatlng.getLat(),
+                            bottomRightLon: neLatlng.getLng()
+                        }};
+
+                        // Python으로 데이터 전송 필요
+                        
+                    }});
+
                 }} catch (error) {{
                     console.error('지도 생성 오류:', error);
                     showError('지도 생성 중 오류가 발생했습니다: ' + error.message);
                 }}
             }});
-            
         }} catch (error) {{
             console.error('카카오맵 초기화 오류:', error);
             showError('카카오맵을 초기화할 수 없습니다: ' + error.message);
@@ -645,6 +452,94 @@ def create_kakao_map(filtered_df, user_lat, user_lon, max_distance, kakao_api_ke
 """
 
     return kakao_map_html
+
+
+# 주소검색------------------------------------------------fix:주소검색
+@st.cache_data(show_spinner=False)
+def geocode(address: str):
+    """개선된 한글 주소 → (lat, lon) 튜플 반환"""
+    if not address:
+        return None, None
+
+    REST_KEY = os.getenv("KAKAO_REST_API_KEY")
+    if not REST_KEY:
+        st.error("❌ KAKAO_REST_API_KEY 환경변수가 설정되지 않았습니다.")
+        return None, None
+
+    # 여러 주소 형식으로 시도 (성공률 향상)
+    address_variations = [
+        address,
+        address.replace("역", ""),  # "신림역" → "신림"
+        f"서울 관악구 {address}" if "서울" not in address else address,
+        f"서울특별시 관악구 {address}" if "서울특별시" not in address else address,
+        f"서울특별시 관악구 신림동" if "신림" in address else address
+    ]
+    
+    # 중복 제거
+    address_variations = list(dict.fromkeys(address_variations))
+
+    url = "https://dapi.kakao.com/v2/local/search/address.json"
+    headers = {"Authorization": f"KakaoAK {REST_KEY}"}
+
+    for i, test_address in enumerate(address_variations, 1):
+        try:
+            # 핵심: 올바른 URL 인코딩
+            params = {"query": test_address}
+            response = requests.get(url, headers=headers, params=params, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("documents"):
+                    y = float(data["documents"][0]["y"])  # 위도
+                    x = float(data["documents"][0]["x"])  # 경도
+                    address_name = data["documents"][0].get("address_name", "")
+                    
+                    st.info(f"✅ 주소 찾기 성공 ({i}번째 시도): {address_name}")
+                    return y, x
+                    
+            elif response.status_code == 401:
+                st.error("❌ 401 오류: REST API 키가 잘못되었습니다")
+                st.error("💡 해결방법: .env 파일의 KAKAO_REST_API_KEY 확인")
+                break
+            elif response.status_code == 403:
+                st.error("❌ 403 오류: API 사용 권한이 없습니다")
+                st.error("💡 해결방법: 카카오 개발자센터에서 도메인/IP 설정 확인")
+                break
+            else:
+                st.warning(f"시도 {i}: '{test_address}' - HTTP {response.status_code}")
+                
+        except requests.exceptions.RequestException as e:
+            st.warning(f"시도 {i}: '{test_address}' - 네트워크 오류: {e}")
+            continue
+
+    st.error("❌ 모든 주소 형식으로 시도했지만 좌표를 찾을 수 없습니다")
+    st.info("💡 다음 주소 형식들을 시도해보세요:")
+    st.info("   • 서울특별시 관악구 신림동")
+    st.info("   • 서울 관악구 신림로 378")
+    st.info("   • 관악구 신림동")
+    
+    return None, None
+
+# with st.sidebar:
+#     st.markdown("### 📍 내 위치 설정")
+#     addr = st.text_input("주소를 입력하세요",
+#                          placeholder="예: 서울 종로구 세종대로 172")
+#     if st.button("검색"):
+#         lat, lon = geocode(addr)
+#         if lat is None:
+#             st.error("좌표를 찾을 수 없습니다. 주소를 다시 확인하세요.")
+#         else:
+#             st.session_state["user_lat"] = lat
+#             st.session_state["user_lon"] = lon
+#             st.success(f"📌 {addr} → ({lat:.5f}, {lon:.5f})")
+
+# user_lat = st.session_state.get("user_lat", 37.5665)  # 서울시청 기본 위도
+# user_lon = st.session_state.get("user_lon", 126.9780)  # 서울시청 기본 경도
+
+
+
+
+
 
 # --- 환경 변수 로드 ---
 st.title("💸 민생회복 소비쿠폰 사용처 찾기")
@@ -671,16 +566,34 @@ selected_district = st.sidebar.selectbox("지역구 선택", all_districts)
 all_industry_codes = ['전체'] + sorted(df_shops['industry_code'].unique().tolist())
 selected_industry_code = st.sidebar.selectbox("업종코드 선택", all_industry_codes)
 
-# 거리 필터
-st.sidebar.markdown("---")
-st.sidebar.header("📍 내 위치 설정")
+# 거리 필터----------------------------------------(fix: 주소검색)
 
-if 'user_location' not in st.session_state:
-    st.session_state.user_location = (37.5665, 126.9780)  # 서울 시청
+with st.sidebar:
+    st.markdown("### 📍 내 위치 설정")
+    addr = st.text_input("주소를 입력하세요", 
+                     placeholder="예: 서울 종로구 세종대로 172", 
+                     key="address_input")
+    if st.button("검색"):
+        lat, lon = geocode(addr)
+        if lat is None:
+            st.error("좌표를 찾을 수 없습니다. 주소를 다시 확인하세요.")
+        else:
+            st.session_state["user_lat"] = lat
+            st.session_state["user_lon"] = lon
+            st.success(f"📌 {addr} → ({lat:.5f}, {lon:.5f})")
 
-col1, col2 = st.sidebar.columns(2)
-user_lat = col1.number_input("위도", value=st.session_state.user_location[0], format="%.4f")
-user_lon = col2.number_input("경도", value=st.session_state.user_location[1], format="%.4f")
+user_lat = st.session_state.get("user_lat", 37.5665)  # 서울시청 기본 위도
+user_lon = st.session_state.get("user_lon", 126.9780)  # 서울시청 기본 경도
+
+# st.sidebar.markdown("---")
+# st.sidebar.header("📍 내 위치 설정")
+
+# if 'user_location' not in st.session_state:
+#     st.session_state.user_location = (37.5665, 126.9780)  # 서울 시청
+
+# col1, col2 = st.sidebar.columns(2)
+# user_lat = col1.number_input("위도", value=st.session_state.user_location[0], format="%.4f")
+# user_lon = col2.number_input("경도", value=st.session_state.user_location[1], format="%.4f")
 
 max_distance = st.sidebar.slider("내 위치에서 최대 거리 (km)", 0.5, 20.0, 5.0, 0.5)
 
@@ -705,13 +618,14 @@ if selected_industry_code != '전체':
 
 # 거리 계산 및 필터링
 if not filtered_df.empty:
-    filtered_df['distance'] = filtered_df.apply(
-        lambda row: calculate_distance(user_lat, user_lon, row['latitude'], row['longitude']),
-        axis=1
-    )
+        filtered_df['distance'] = filtered_df.apply(
+            lambda row: calculate_distance(user_lat, user_lon, row['latitude'], row['longitude']),
+            axis=1
+        )
 
-    filtered_df = filtered_df[filtered_df['distance'] <= max_distance]
-    filtered_df = filtered_df.sort_values('distance').head(1000)  # 가장 가까운 1000개만 표시
+        filtered_df = filtered_df[filtered_df['distance'] <= max_distance]
+        filtered_df = filtered_df.sort_values('distance').head(1000)  # 가장 가까운 1000개만 표시
+    
 
 # --- 통계 정보 표시 ---
 col1, col2, col3, col4 = st.columns(4)
@@ -805,7 +719,91 @@ with tab3:
         try:
             # 전체 데이터를 사용한 종합 분석
             generate_analysis(df_shops)
+            
+            # ———————————————————————————————————————————
+            # (2) 👥 인구 대비 가맹점 수 (1,000명당) - 여기서부터 추가
+            # ———————————————————————————————————————————
+            st.markdown("### 👥 인구 대비 가맹점 수 (1,000명당)")
+            
+            try:
+                # 구별 매장 수 집계
+                store_counts = df_shops.groupby("district").size().reset_index(name="stores")
+                
+                # 인구 데이터 읽어오기
+                pop_df = pd.read_csv(
+                    "data/district_population.csv",
+                    skiprows=2,
+                    usecols=[0, 2],
+                    names=["district", "population"],
+                    header=None
+                )
+                
+                # 병합 및 1,000명당 계산
+                pop_df = pop_df.merge(store_counts, on="district", how="inner")
+                pop_df["stores_per_1000"] = pop_df["stores"] / pop_df["population"] * 1000
+                
+                # 버블 차트 생성
+                bubble = (
+                    alt.Chart(pop_df)
+                    .mark_circle(opacity=0.7)
+                    .encode(
+                        x=alt.X("population:Q", title="인구수"),
+                        y=alt.Y("stores:Q", title="매장 수"),
+                        size=alt.Size("stores_per_1000:Q", title="1,000명당 매장 수", legend=None),
+                        color=alt.Color("stores_per_1000:Q", scale=alt.Scale(scheme="reds"), title="1,000명당 매장 수"),
+                        tooltip=["district", "stores", "population", alt.Tooltip("stores_per_1000:Q", format=".2f")]
+                    )
+                    .properties(height=300)
+                )
+                st.altair_chart(bubble, use_container_width=True)
+                
+            except FileNotFoundError:
+                st.warning("인구 데이터 파일(data/district_population.csv)을 찾을 수 없습니다.")
+            except Exception as e:
+                st.error(f"인구 대비 분석 중 오류: {e}")
+                
+            # ———————————————————————————————————————————
+            # (3) 🌐 구면적 대비 매장 밀도 (개/km²)
+            # ———————————————————————————————————————————
+            st.markdown("### 🌐 구면적 대비 매장 밀도 (개/km²)")
+            
+            try:
+                # 구별 매장 수 집계 (재사용)
+                store_counts = df_shops.groupby("district").size().reset_index(name="stores")
+                
+                # 면적 데이터 읽어오기
+                area_df = pd.read_csv(
+                    "data/district_area_km2.csv",
+                    skiprows=3,
+                    usecols=[1, 3],
+                    names=["district", "area_km2"],
+                    header=None
+                )
+                
+                # 병합 및 밀도 계산
+                area_df = area_df.merge(store_counts, on="district", how="inner")
+                area_df["density"] = area_df["stores"] / area_df["area_km2"]
+                
+                # 바 차트 생성
+                bar = (
+                    alt.Chart(area_df.sort_values("density", ascending=False))
+                    .mark_bar()
+                    .encode(
+                        x=alt.X("density:Q", title="개/km²"),
+                        y=alt.Y("district:N", sort=alt.EncodingSortField("density", order="descending")),
+                        tooltip=["district", "stores", "area_km2", alt.Tooltip("density:Q", format=".2f")]
+                    )
+                    .properties(height=400)
+                )
+                st.altair_chart(bar, use_container_width=True)
+                
+            except FileNotFoundError:
+                st.warning("면적 데이터 파일(data/district_area_km2.csv)을 찾을 수 없습니다.")
+            except Exception as e:
+                st.error(f"면적 대비 분석 중 오류: {e}")
+                
         except Exception as e:
+            # 여기서부터는 원래 코드 그대로
             st.error(f"통계 분석 중 오류가 발생했습니다: {e}")
             st.info("기본 통계 정보를 표시합니다.")
             
@@ -831,7 +829,6 @@ with tab3:
                 st.error(f"통계 분석 중 오류가 발생했습니다: {e}")
         else:
             st.error("데이터를 불러올 수 없습니다.")
-
 # --- 푸터 ---
 st.markdown("---")
 st.markdown("🔧 **카카오맵 API**를 활용한 민생회복 소비쿠폰 사용처 검색 서비스")
