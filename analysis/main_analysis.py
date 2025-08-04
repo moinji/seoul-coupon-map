@@ -29,7 +29,6 @@ def generate_analysis(df):
         st.warning("⚠️ 분석할 데이터가 없습니다.")
         return
 
-    st.header("📊 서울시 소비쿠폰 가맹점 통계 분석")
     st.markdown("---")
 
     col1, col2, col3 = st.columns(3)
@@ -84,8 +83,6 @@ def generate_analysis(df):
     ax6.set_ylabel("의료/복지 업종 비율 (%)")
     plt.xticks(rotation=45)
     st.pyplot(fig6)
-
-    st.success("✅ 분석이 완료되었습니다.")
 
 if __name__ == '__main__':
     # 테스트용 데이터프레임 생성

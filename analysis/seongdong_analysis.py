@@ -41,15 +41,15 @@ DONG_MERGE_MAP = {
     "용답동": "용답동"
 }
 
-csv_path = "data/shops_seongdong.csv"
-pop_path = "data/Seongdong_Population.csv"
+SEONGDONG_DATA_PATH = "data/shops_seongdong.csv"
+SEONGDONG_POPULATION_DATA_PATH = "data/seongdong_population.csv"
 
 def load_and_merge_data():
     """데이터 로드 및 병합"""
     try:
         # 1. 데이터 로드
-        shop_df = pd.read_csv(csv_path)
-        pop_df = pd.read_csv(pop_path, encoding='utf-8-sig')
+        shop_df = pd.read_csv(SEONGDONG_DATA_PATH)
+        pop_df = pd.read_csv(SEONGDONG_POPULATION_DATA_PATH, encoding='utf-8-sig')
         
         # 컬럼명 정리
         pop_df.columns = pop_df.columns.str.strip()
@@ -175,15 +175,14 @@ def create_folium_map(merged_df):
     return m
 
 def run_seongdong_analysis():
-    st.markdown("## 📊 성동구 소비쿠폰 + 인구 통합 분석")
     
     # 데이터 파일 존재 확인 및 크롤링
-    if not os.path.exists(csv_path):
+    if not os.path.exists(SEONGDONG_DATA_PATH):
         st.warning("⚠️ CSV 파일이 없습니다. 데이터를 먼저 수집해주세요.")
         if st.button("🕷️ [크롤링 실행] 성동구청 소비쿠폰 가맹점 데이터 수집"):
             with st.spinner("크롤링 중..."):
                 try:
-                    df = crawl_shops_seongdong(output_path=csv_path, max_pages=20)
+                    df = crawl_shops_seongdong(output_path=SEONGDONG_DATA_PATH, max_pages=20)
                     st.success(f"✅ 크롤링 완료! {len(df)}개 매장 수집됨")
                     st.rerun()
                 except Exception as e:
@@ -206,7 +205,7 @@ def run_seongdong_analysis():
         st.markdown("### 🔍 데이터 출처 및 설명")
         st.markdown("""
         - **shops_seongdong.csv**: 성동구청 소비쿠폰 가맹점 데이터 (웹 크롤링)
-        - **Seongdong_Population.csv**: 성동구 인구 통계 데이터 (공공데이터)
+        - **seongdong_population.csv**: 성동구 인구 통계 데이터 (공공데이터)
         """)
         
         st.markdown("### 📊 데이터 구조")
