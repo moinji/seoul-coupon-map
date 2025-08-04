@@ -159,6 +159,7 @@ def run_seongdong_analysis():
         st.markdown("#### 📌 발표 TIP")
         st.info("성동구는 **고령 인구 비중(65세 이상)**이 약 **{:.1f}%**이며,\n5세 이하 인구도 {:.1f}%로 보육 수요를 고려한 정책 설계 필요".format(elderly_ratio, child_ratio))
 
+
     with tabs[1]:
         col1, col2 = st.columns(2)
         with col1:
