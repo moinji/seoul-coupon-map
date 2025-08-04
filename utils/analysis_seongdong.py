@@ -7,6 +7,7 @@ from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+
 import streamlit as st
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -18,7 +19,7 @@ import re
 
 sns.set_style("whitegrid")
 
-def crawl_shops_sungdong(output_path='./data/shops_sungdong.csv', max_pages=2):
+def crawl_shops_seongdong(output_path='./data/shops_seongdong.csv', max_pages=2):
     chrome_options = Options()
     chrome_options.add_argument('--headless')
     chrome_options.add_argument('--no-sandbox')
@@ -103,15 +104,13 @@ def render_bar_chart(data, title, xlabel, ylabel="", color="skyblue", rotate=30,
     st.pyplot(fig)
 
 
-# 🔧 핵심: 이 함수가 빠져있었습니다!
-def run_sungdong_analysis():
-    """성동구청 소비쿠폰 가맹점 데이터 분석 메인 함수"""
-    
+
+def run_seongdong_analysis():
     st.markdown("## 🔍 데이터 흐름 요약")
-    st.info("데이터 흐름: 웹스크래핑 → CSV 저장 (shops_sungdong.csv) → CSV 불러오기 → 컬럼 생성 및 전처리 → 분석 및 시각화")
+    st.info("데이터 흐름: 웹스크래핑 → CSV 저장 (shops_seongdong.csv) → CSV 불러오기 → 컬럼 생성 및 전처리 → 분석 및 시각화")
 
     # 파일 설명
-    st.markdown("**사용 데이터 파일:** `shops_sungdong.csv` (성동구청 소비쿠폰 가맹점 목록)")
+    st.markdown("**사용 데이터 파일:** `shops_seongdong.csv` (성동구청 소비쿠폰 가맹점 목록)")
 
     st.sidebar.markdown("## 🎤 발표 설정")
     small_mode = st.sidebar.checkbox("발표 모드 (폰트/그래프 축소)", value=False)
@@ -122,7 +121,7 @@ def run_sungdong_analysis():
     figsize = (8, chart_height / 100)
 
     # 사용 데이터 파일 경로
-    csv_path = "./data/shops_sungdong.csv"
+    csv_path = "./data/shops_seongdong.csv"
 
     st.subheader("🏬 성동구청 소비쿠폰 가맹점 데이터 분석")
 
@@ -133,7 +132,7 @@ def run_sungdong_analysis():
         if st.button("🕷️ [크롤링 실행] 성동구청 소비쿠폰 가맹점 데이터 수집"):
             with st.spinner("크롤링 중..."):
                 try:
-                    df = crawl_shops_sungdong(output_path=csv_path, max_pages=20)
+                    df = crawl_shops_seongdong(output_path=csv_path, max_pages=20)
                     st.success(f"✅ 크롤링 완료! {len(df)}개 매장 수집됨")
                     st.rerun()  # 크롤링 후 자동 새로고침
                 except Exception as e:
@@ -141,11 +140,7 @@ def run_sungdong_analysis():
         return  # 파일 없으면 이후 분석 로직은 실행하지 않음
 
     # ✅ CSV가 있을 경우 분석 진행
-    try:
-        df = pd.read_csv(csv_path)
-    except Exception as e:
-        st.error(f"❌ CSV 파일 읽기 오류: {e}")
-        return
+    df = pd.read_csv(csv_path)
 
     # 데이터 구조 확인
     st.markdown("### 🔢 데이터 컬럼 구조")
@@ -225,9 +220,3 @@ def run_sungdong_analysis():
         p = dong_counts / dong_counts.sum()
         diversity_score = entropy(p)
         st.metric("🧠 소재지 다양성 (Entropy)", f"{diversity_score:.3f}")
-
-
-# 🔧 만약 sungdong_analysis 함수도 필요하다면 여기에 추가
-def sungdong_analysis():
-    """기존 sungdong_analysis 함수가 필요한 경우를 위한 래퍼"""
-    return run_sungdong_analysis()

@@ -22,6 +22,7 @@ import warnings
 import platform
 import altair as alt
 
+
 def configure_matplotlib_fonts():
     """matplotlib 한글 폰트 설정"""
     try:
@@ -806,8 +807,8 @@ with tab4:
     st.subheader("📈 성동구청 크롤링 분석")
 
     try:
-        from utils.analysis_sungdong import run_sungdong_analysis
-        run_sungdong_analysis()
+        from utils.analysis_seongdong import run_seongdong_analysis
+        run_seongdong_analysis()
     except ImportError:
         st.warning("⚠️ 분석 함수를 찾을 수 없습니다.")
         st.info("💡 현재 개발 중인 기능입니다.")
