@@ -13,4 +13,7 @@ selenium
 beautifulsoup4
 wordcloud
 lxml
+streamlit-javascriptstreamlit>=1.28.0
 streamlit-javascript
+scikit-learn
+webdriver-manager

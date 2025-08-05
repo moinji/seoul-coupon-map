@@ -85,8 +85,6 @@ def generate_analysis(df):
     plt.xticks(rotation=45)
     st.pyplot(fig6)
 
-    st.success("✅ 분석이 완료되었습니다.")
-
 if __name__ == '__main__':
     # 테스트용 데이터프레임 생성
     data = {

@@ -1,0 +1,61 @@
+C:.
+|   .env
+|   .gitignore
+|   app.py
+|   config.py
+|   folder_structure.txt
+|   README.md
+|   requirements.txt
+|   
++---analysis
+|   |   main_analysis.py
+|   |   seongdong_analysis.py
+|   |   seongdong_analysis_updated.py
+|   |   
+|   \---__pycache__
+|           main_analysis.cpython-312.pyc
+|           seongdong_analysis.cpython-312.pyc
+|           
++---components
+|   |   kakao_map.py
+|   |   ui.py
+|   |   
+|   \---__pycache__
+|           kakao_map.cpython-312.pyc
+|           ui.cpython-312.pyc
+|           
++---data
+|   |   district_area_km2.csv
+|   |   district_population.csv
+|   |   shops.csv
+|   |   seongdong_population.csv
+|   |   shops.csv
+|   |   shops_seongdong.csv
+|   |   
+|   \---raw
+|           ����Ư����_������_�Ϲ���������Ȳ_20240814.csv
+|           ����_�α� �� ������Ȳ.xlsx
+|           
++---services
+|   |   kakao_api.py
+|   |   seongdong_scraper.py
+|   |   
+|   \---__pycache__
+|           kakao_api.cpython-312.pyc
+|           seongdong_scraper.cpython-312.pyc
+|           
++---utils
+|   |   data_loader.py
+|   |   helpers.py
+|   |   __init__.py
+|   |   
+|   \---__pycache__
+|           analysis_sungdong.cpython-312.pyc
+|           data_analysis.cpython-312.pyc
+|           data_loader.cpython-312.pyc
+|           helpers.cpython-312.pyc
+|           __init__.cpython-312.pyc
+|           
+\---__pycache__
+        config.cpython-312.pyc
+        
