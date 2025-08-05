@@ -42,23 +42,19 @@ DONG_MERGE_MAP = {
 }
 
 SEONGDONG_DATA_PATH = "data/shops_seongdong.csv"
-seongdong_population_DATA_PATH = "data/seongdong_population.csv"
+SEONGDONG_POPULATION_DATA_PATH = "data/seongdong_population.csv"
 
 def load_and_merge_data():
     """데이터 로드 및 병합"""
     try:
         # 1. 데이터 로드
         shop_df = pd.read_csv(SEONGDONG_DATA_PATH)
-        pop_df = pd.read_csv(seongdong_population_DATA_PATH, encoding='utf-8-sig')
+        pop_df = pd.read_csv(SEONGDONG_POPULATION_DATA_PATH, encoding='utf-8-sig')
         
         # 컬럼명 정리
         pop_df.columns = pop_df.columns.str.strip()
         shop_df.columns = shop_df.columns.str.strip()
-        
-        # 디버깅용 출력
-        st.write("🔍 **로드된 데이터 정보**")
-        st.write(f"가맹점 데이터: {len(shop_df)}행, 컬럼: {list(shop_df.columns)}")
-        st.write(f"인구 데이터: {len(pop_df)}행, 컬럼: {list(pop_df.columns)}")
+    
         
         # 2. 인구 데이터 동 매핑 및 집계
         pop_df["행정기관"] = pop_df["행정기관"].map(DONG_MERGE_MAP).fillna(pop_df["행정기관"])
@@ -221,7 +217,6 @@ def run_seongdong_analysis():
         """)
         mapping_df = pd.DataFrame(list(DONG_MERGE_MAP.items()), columns=['행정동', '통합동'])
         st.dataframe(mapping_df, use_container_width=True)
-        st.write(f"데이터 병합 후: {len(merged_df)}행, 총인구수 유효한 행: {merged_df['총인구수'].notna().sum()}개")
         st.markdown("### 🛠️ 전처리 흐름")
         st.markdown("""
         1. **데이터 수집**: 웹 크롤링으로 가맹점 데이터 수집
