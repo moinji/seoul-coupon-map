@@ -1,0 +1,16 @@
+streamlit>=1.28.0
+pandas
+numpy
+matplotlib
+seaborn
+scipy
+folium
+streamlit-folium
+requests
+geopy
+python-dotenv
+selenium
+beautifulsoup4
+wordcloud
+lxml
+webdriver-manager

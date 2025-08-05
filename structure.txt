@@ -1,0 +1,52 @@
+Project Structure:
+
+seoul-coupon-map-main/
+├── .env: Environment variables for the application.
+├── .gitignore: Specifies intentionally untracked files to ignore.
+├── app.py: Main application entry point.
+├── config.py: Configuration settings for the application.
+├── folder_structure.txt: This file, detailing the project structure.
+├── README.md: Project README file.
+├── requirements.txt: Python dependencies for the project.
+├── __pycache__/: Python bytecode cache.
+├── analysis/: Contains scripts for data analysis.
+│   ├── main_analysis.py: Main analysis script.
+│   ├── seongdong_analysis_core.py: Core analysis functions for Seongdong district.
+│   ├── seongdong_analysis.py: Specific analysis script for Seongdong district.
+│   └── __pycache__/: Python bytecode cache for analysis module.
+├── components/: UI components and related logic.
+│   ├── kakao_map.py: Kakao Map integration component.
+│   ├── seongdong_analysis_ui.py: UI components for Seongdong analysis.
+│   ├── ui.py: General UI components.
+│   └── __pycache__/: Python bytecode cache for components module.
+├── data/: Stores raw and processed data files.
+│   ├── district_area_km2.csv: CSV file with district area data.
+│   ├── district_population.csv: CSV file with district population data.
+│   ├── seongdong_dong_analysis.csv: Analysis results for Seongdong dongs.
+│   ├── seongdong_population_data.csv: Population data for Seongdong.
+│   ├── seongdong_Population.csv: Another population data file for Seongdong.
+│   ├── shops_seongdong.csv: Shop data specific to Seongdong.
+│   ├── shops.csv: General shop data.
+│   └── raw/: Raw data files.
+│       ├── 서울특별시_성동구_일반음식점현황_20240814.csv: Raw data for restaurants in Seongdong.
+│       └── 성동_인구 및 세대현황.xlsx: Raw Excel data for Seongdong population and households.
+├── services/: Contains service-related scripts, e.g., API interactions, scrapers.
+│   ├── kakao_api.py: Kakao API interaction script.
+│   ├── seongdong_scraper.py: Web scraper for Seongdong data.
+│   └── __pycache__/: Python bytecode cache for services module.
+└── utils/: Utility functions and helper scripts.
+    ├── __init__.py: Python package initializer.
+    ├── data_loader.py: Utility for loading data.
+    ├── helpers.py: General helper functions.
+    ├── seongdong_analysis_utils.py: Utility functions for Seongdong analysis.
+    ├── __pycache__/: Python bytecode cache for utils module.
+    └── data/: (Duplicate of main data folder, consider consolidating if not intentional)
+        ├── district_area_km2.csv
+        ├── district_population.csv
+        ├── seongdong_dong_analysis.csv
+        ├── seongdong_population_data.csv
+        ├── Seongdong_Population.csv
+        ├── shops.csv
+        └── raw/
+            ├── 서울특별시_성동구_일반음식점현황_20240814.csv
+            └── 성동_인구 및 세대현황.xlsx

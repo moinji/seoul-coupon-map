@@ -1,0 +1,52 @@
+프로젝트 구조:
+
+seoul-coupon-map-main/
+├── .env: 애플리케이션 환경 변수.
+├── .gitignore: Git에서 추적하지 않을 파일을 지정합니다.
+├── app.py: 애플리케이션의 메인 진입점.
+├── config.py: 애플리케이션의 설정.
+├── folder_structure.txt: 이 파일은 프로젝트 구조를 상세히 설명합니다.
+├── README.md: 프로젝트 README 파일.
+├── requirements.txt: 프로젝트에 필요한 Python 의존성.
+├── __pycache__/: Python 바이트코드 캐시.
+├── analysis/: 데이터 분석 스크립트 포함.
+│   ├── main_analysis.py: 메인 분석 스크립트.
+│   ├── seongdong_analysis_core.py: 성동구 분석을 위한 핵심 함수.
+│   ├── seongdong_analysis.py: 성동구에 특화된 분석 스크립트.
+│   └── __pycache__/: analysis 모듈의 Python 바이트코드 캐시.
+├── components/: UI 컴포넌트 및 관련 로직.
+│   ├── kakao_map.py: 카카오 맵 통합 컴포넌트.
+│   ├── seongdong_analysis_ui.py: 성동구 분석을 위한 UI 컴포넌트.
+│   ├── ui.py: 일반 UI 컴포넌트.
+│   └── __pycache__/: components 모듈의 Python 바이트코드 캐시.
+├── data/: 원본 및 처리된 데이터 파일 저장.
+│   ├── district_area_km2.csv: 구별 면적 데이터 CSV 파일.
+│   ├── district_population.csv: 구별 인구 데이터 CSV 파일.
+│   ├── seongdong_dong_analysis.csv: 성동구 동별 분석 결과.
+│   ├── seongdong_population_data.csv: 성동구 인구 데이터.
+│   ├── seongdong_Population.csv: 성동구 인구 데이터 파일 (다른 버전).
+│   ├── shops_seongdong.csv: 성동구에 특화된 상점 데이터.
+│   ├── shops.csv: 일반 상점 데이터.
+│   └── raw/: 원본 데이터 파일.
+│       ├── 서울특별시_성동구_일반음식점현황_20240814.csv: 성동구 일반음식점 현황 원본 데이터.
+│       └── 성동_인구 및 세대현황.xlsx: 성동구 인구 및 세대 현황 원본 Excel 데이터.
+├── services/: 서비스 관련 스크립트 (예: API 상호작용, 스크래퍼).
+│   ├── kakao_api.py: 카카오 API 상호작용 스크립트.
+│   ├── seongdong_scraper.py: 성동구 데이터 웹 스크래퍼.
+│   └── __pycache__/: services 모듈의 Python 바이트코드 캐시.
+└── utils/: 유틸리티 함수 및 헬퍼 스크립트.
+    ├── __init__.py: Python 패키지 초기화 파일.
+    ├── data_loader.py: 데이터 로딩 유틸리티.
+    ├── helpers.py: 일반 헬퍼 함수.
+    ├── seongdong_analysis_utils.py: 성동구 분석을 위한 유틸리티 함수.
+    ├── __pycache__/: utils 모듈의 Python 바이트코드 캐시.
+    └── data/: (메인 data 폴더와 중복됨, 의도하지 않은 경우 통합 고려)
+        ├── district_area_km2.csv
+        ├── district_population.csv
+        ├── seongdong_dong_analysis.csv
+        ├── seongdong_population_data.csv
+        ├── Seongdong_Population.csv
+        ├── shops.csv
+        └── raw/
+            ├── 서울특별시_성동구_일반음식점현황_20240814.csv
+            └── 성동_인구 및 세대현황.xlsx
