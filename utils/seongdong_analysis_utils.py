@@ -46,11 +46,6 @@ def load_and_merge_data():
         pop_df.columns = pop_df.columns.str.strip()
         shop_df.columns = shop_df.columns.str.strip()
         
-        # 디버깅용 출력
-        st.write("🔍 **로드된 데이터 정보**")
-        st.write(f"가맹점 데이터: {len(shop_df)}행, 컬럼: {list(shop_df.columns)}")
-        st.write(f"인구 데이터: {len(pop_df)}행, 컬럼: {list(pop_df.columns)}")
-        
         # 2. 인구 데이터 동 매핑 및 집계
         pop_df["행정기관"] = pop_df["행정기관"].map(DONG_MERGE_MAP).fillna(pop_df["행정기관"])
         pop_df = pop_df.groupby("행정기관", as_index=False).sum(numeric_only=True)
