@@ -42,14 +42,14 @@ DONG_MERGE_MAP = {
 }
 
 SEONGDONG_DATA_PATH = "data/shops_seongdong.csv"
-SEONGDONG_POPULATION_DATA_PATH = "data/seongdong_population.csv"
+seongdong_population_DATA_PATH = "data/seongdong_population.csv"
 
 def load_and_merge_data():
     """데이터 로드 및 병합"""
     try:
         # 1. 데이터 로드
         shop_df = pd.read_csv(SEONGDONG_DATA_PATH)
-        pop_df = pd.read_csv(SEONGDONG_POPULATION_DATA_PATH, encoding='utf-8-sig')
+        pop_df = pd.read_csv(seongdong_population_DATA_PATH, encoding='utf-8-sig')
         
         # 컬럼명 정리
         pop_df.columns = pop_df.columns.str.strip()

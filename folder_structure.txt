@@ -28,7 +28,7 @@ C:.
 |   |   district_area_km2.csv
 |   |   district_population.csv
 |   |   shops.csv
-|   |   Seongdong_Population.csv
+|   |   seongdong_population.csv
 |   |   shops.csv
 |   |   shops_seongdong.csv
 |   |   
