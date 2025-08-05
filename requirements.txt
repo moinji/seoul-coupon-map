@@ -15,3 +15,7 @@ wordcloud
 lxml
 webdriver-manager
 scikit-learn
+plotly
+requests
+openpyxl
+xlrd
